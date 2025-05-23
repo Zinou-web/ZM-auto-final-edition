@@ -58,6 +58,12 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.CircularProgressIndicator
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.Color
 
 /**
  * Enum class that contains all the possible screens in our app
@@ -290,7 +296,7 @@ fun NavGraph(
                 carId = carId,
                 onBackPressed = { navController.popBackStack() },
                 onGalleryClick = { navController.navigate(Screen.Gallery.name) },
-                onBookNowClick = { navController.navigate(Screen.CarBooking.name) }
+                onBookNowClick = { navController.navigate("${Screen.CarBooking.name}/$carId") }
             )
         }
 
@@ -344,26 +350,51 @@ fun NavGraph(
             )
         }
 
-        composable(Screen.CarBooking.name) {
-            // Create a mock car for now
-            val mockCar = com.example.myapplication.data.model.Car(
-                id = 1,
-                brand = "Toyota",
-                model = "Corolla",
-                year = 2022,
-                rentalPricePerDay = java.math.BigDecimal(55.0),
-                transmission = "Automatic",
-                rating = 4,
-                colour = "White",
-                fuel = "Petrol",
-                type = "Sedan"
-            )
+        composable(
+            route = "${Screen.CarBooking.name}/{carId}",
+            arguments = listOf(navArgument("carId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val carId = backStackEntry.arguments?.getString("carId") ?: ""
+            val carViewModel: CarViewModel = hiltViewModel()
+            val reservationViewModel: ReservationViewModel = hiltViewModel()
             
-            HomeCarBookingScreen(
-                car = mockCar,
-                onBackPressed = { navController.popBackStack() },
-                onContinue = { navController.navigate(Screen.CompleteYourBooking.name) }
-            )
+            // State to track the loaded car
+            val carDetailsState by carViewModel.carDetailsState.collectAsState()
+            var car by remember { mutableStateOf<com.example.myapplication.data.model.Car?>(null) }
+            
+            // Load car details when screen is first displayed
+            LaunchedEffect(carId) {
+                carId.toLongOrNull()?.let { id ->
+                    carViewModel.loadCarById(id)
+                }
+            }
+            
+            // Update car state when data is loaded
+            LaunchedEffect(carDetailsState) {
+                when (carDetailsState) {
+                    is CarUiState.SingleCarSuccess -> {
+                        car = (carDetailsState as CarUiState.SingleCarSuccess).car
+                    }
+                    else -> {}
+                }
+            }
+            
+            // Display loading or car booking screen based on state
+            if (carDetailsState is CarUiState.Loading || car == null) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = Color(0xFF149459))
+                }
+            } else {
+                HomeCarBookingScreen(
+                    car = car!!,
+                    viewModel = reservationViewModel,
+                    onBackPressed = { navController.popBackStack() },
+                    onContinue = { navController.navigate(Screen.CompleteYourBooking.name) }
+                )
+            }
         }
 
         composable(Screen.CompleteYourBooking.name) {

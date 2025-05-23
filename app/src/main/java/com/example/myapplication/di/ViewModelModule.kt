@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.myapplication.data.repository.CarRepository
 import com.example.myapplication.ui.screens.home.CarViewModel
+import com.example.myapplication.ui.screens.home.ReservationViewModel
 import com.example.myapplication.ui.screens.profile.ProfileViewModel
 import dagger.Binds
 import dagger.MapKey
@@ -34,6 +35,12 @@ abstract class ViewModelModule {
     @HiltViewModelMap
     @ViewModelKey(CarViewModel::class)
     abstract fun bindCarViewModel(carViewModel: CarViewModel): ViewModel
+    
+    @Binds
+    @IntoMap
+    @HiltViewModelMap
+    @ViewModelKey(ReservationViewModel::class)
+    abstract fun bindReservationViewModel(reservationViewModel: ReservationViewModel): ViewModel
     
     // Add other ViewModel bindings here
     // Example:
