@@ -29,105 +29,137 @@ class CarRepositoryImpl @Inject constructor(
     private val mockCars = listOf(
         Car(
             id = 1,
-            licensePlate = "ABC123",
-            description = "Comfortable sedan perfect for city driving",
-            picture = "https://storage.googleapis.com/car_rental_bucket_public/sedan1.jpg",
             brand = "Toyota",
-            condition = "Excellent",
-            model = "Camry",
-            mileage = 25000,
-            type = "Sedan",
+            model = "Corolla",
             year = 2022,
-            colour = "Blue",
+            rentalPricePerDay = java.math.BigDecimal(55.0),
             transmission = "Automatic",
-            fuel = "Hybrid",
-            seatingCapacity = 5,
-            rentalPricePerDay = BigDecimal(75),
-            rentalStatus = "Available",
-            currentLocation = "Main Street Garage",
-            rating = 5
+            rating = 4,
+            colour = "White",
+            fuel = "Petrol",
+            type = "Sedan" // Exact match for filter type
         ),
         Car(
             id = 2,
-            licensePlate = "XYZ789",
-            description = "Spacious SUV for family trips",
-            picture = "https://storage.googleapis.com/car_rental_bucket_public/suv1.jpg",
-            brand = "Honda",
-            condition = "Good",
-            model = "CR-V",
-            mileage = 35000,
-            type = "SUV",
-            year = 2021,
-            colour = "Black",
+            brand = "BMW",
+            model = "X5",
+            year = 2023,
+            rentalPricePerDay = java.math.BigDecimal(120.0),
             transmission = "Automatic",
-            fuel = "Petrol",
-            seatingCapacity = 7,
-            rentalPricePerDay = BigDecimal(90),
-            rentalStatus = "Available",
-            currentLocation = "Airport Terminal 2",
-            rating = 4
+            rating = 5,
+            colour = "Black",
+            fuel = "Diesel",
+            type = "SUV" // Exact match for filter type
         ),
         Car(
             id = 3,
-            licensePlate = "DEF456",
-            description = "Luxury car with premium features",
-            picture = "https://storage.googleapis.com/car_rental_bucket_public/luxury1.jpg",
-            brand = "BMW",
-            condition = "Excellent",
-            model = "3 Series",
-            mileage = 15000,
-            type = "Luxury",
+            brand = "Mercedes",
+            model = "S-Class",
             year = 2023,
-            colour = "White",
+            rentalPricePerDay = java.math.BigDecimal(150.0),
             transmission = "Automatic",
+            rating = 5,
+            colour = "Silver",
             fuel = "Petrol",
-            seatingCapacity = 5,
-            rentalPricePerDay = BigDecimal(150),
-            rentalStatus = "Available",
-            currentLocation = "Downtown Branch",
-            rating = 5
+            type = "Luxury" // Exact match for filter type
         ),
         Car(
             id = 4,
-            licensePlate = "GHI789",
-            description = "Compact car for easy city navigation",
-            picture = "https://storage.googleapis.com/car_rental_bucket_public/compact1.jpg",
             brand = "Toyota",
-            condition = "Good",
-            model = "Corolla",
-            mileage = 40000,
-            type = "Compact",
+            model = "Yaris",
             year = 2021,
-            colour = "Red",
+            rentalPricePerDay = java.math.BigDecimal(45.0),
             transmission = "Manual",
+            rating = 3,
+            colour = "Red",
             fuel = "Petrol",
-            seatingCapacity = 5,
-            rentalPricePerDay = BigDecimal(60),
-            rentalStatus = "Available",
-            currentLocation = "West Side Garage",
-            rating = 4
+            type = "Compact" // Exact match for filter type
         ),
         Car(
             id = 5,
-            licensePlate = "JKL012",
-            description = "Electric car with long range",
-            picture = "https://storage.googleapis.com/car_rental_bucket_public/electric1.jpg",
             brand = "Tesla",
-            condition = "Excellent",
             model = "Model 3",
-            mileage = 10000,
-            type = "Electric",
             year = 2023,
-            colour = "Silver",
+            rentalPricePerDay = java.math.BigDecimal(130.0),
             transmission = "Automatic",
+            rating = 5,
+            colour = "White",
             fuel = "Electric",
-            seatingCapacity = 5,
-            rentalPricePerDay = BigDecimal(120),
-            rentalStatus = "Available",
-            currentLocation = "Central Station",
-            rating = 5
+            type = "Electric" // Exact match for filter type
+        ),
+        Car(
+            id = 6,
+            brand = "Audi",
+            model = "A4",
+            year = 2022,
+            rentalPricePerDay = java.math.BigDecimal(95.0),
+            transmission = "Automatic",
+            rating = 4,
+            colour = "Blue",
+            fuel = "Petrol",
+            type = "Sedan"
+        ),
+        Car(
+            id = 7,
+            brand = "BMW",
+            model = "3 Series",
+            year = 2021,
+            rentalPricePerDay = java.math.BigDecimal(90.0),
+            transmission = "Automatic",
+            rating = 4,
+            colour = "Black",
+            fuel = "Diesel",
+            type = "Luxury"
+        ),
+        Car(
+            id = 8,
+            brand = "Volkswagen",
+            model = "Golf",
+            year = 2020,
+            rentalPricePerDay = java.math.BigDecimal(50.0),
+            transmission = "Manual",
+            rating = 3,
+            colour = "Grey",
+            fuel = "Petrol",
+            type = "Compact"
+        ),
+        Car(
+            id = 9,
+            brand = "Nissan",
+            model = "Qashqai",
+            year = 2022,
+            rentalPricePerDay = java.math.BigDecimal(70.0),
+            transmission = "Automatic",
+            rating = 4,
+            colour = "Orange",
+            fuel = "Petrol",
+            type = "SUV"
+        ),
+        Car(
+            id = 10,
+            brand = "Tesla",
+            model = "Model Y",
+            year = 2023,
+            rentalPricePerDay = java.math.BigDecimal(140.0),
+            transmission = "Automatic",
+            rating = 5,
+            colour = "Black",
+            fuel = "Electric",
+            type = "Electric"
         )
     )
+
+    init {
+        // Debug: Print all available car types
+        if (useMockData) {
+            Log.d("CarRepository", "Available car types in mock data:")
+            val types = mockCars.map { it.type }.distinct()
+            Log.d("CarRepository", "Types: $types")
+            mockCars.forEach { car ->
+                Log.d("CarRepository", "Car ${car.id}: ${car.brand} ${car.model}, Type: '${car.type}'")
+            }
+        }
+    }
 
     override fun getAllCars(): Flow<ApiResource<List<Car>>> = flow {
         emit(ApiResource(status = ApiStatus.LOADING))
@@ -167,10 +199,25 @@ class CarRepositoryImpl @Inject constructor(
         emit(ApiResource(status = ApiStatus.LOADING))
         try {
             if (useMockData) {
-                Log.d("CarRepository", "Using mock car data for brand: $brand")
-                kotlinx.coroutines.delay(1000) // Simulate network delay
-                val filteredCars = mockCars.filter { it.brand.contains(brand, ignoreCase = true) }
+                Log.d("CarRepository", "Using mock car data for brand: '$brand'")
+                kotlinx.coroutines.delay(500) // Shorter delay for better testing
+                
+                // Print all available brands for debugging
+                val allBrands = mockCars.map { it.brand }.distinct()
+                Log.d("CarRepository", "Available brands in mock data: $allBrands")
+                
+                // Use contains() for partial brand matching with detailed logging
+                val filteredCars = mockCars.filter { car ->
+                    val matches = car.brand.contains(brand, ignoreCase = true)
+                    Log.d("CarRepository", "Checking car ${car.id}: brand='${car.brand}' against '$brand', matches=$matches")
+                    matches
+                }
+                
                 Log.d("CarRepository", "Found ${filteredCars.size} cars matching brand '$brand'")
+                filteredCars.forEach { car ->
+                    Log.d("CarRepository", "Matched car: ${car.brand} ${car.model}, Type: ${car.type}")
+                }
+                
                 emit(ApiResource(status = ApiStatus.SUCCESS, data = filteredCars))
             } else {
                 val token = authPreferenceManager.getAuthToken() ?: throw IllegalStateException("Not authenticated")
@@ -178,6 +225,7 @@ class CarRepositoryImpl @Inject constructor(
                 emit(ApiResource(status = ApiStatus.SUCCESS, data = cars))
             }
         } catch (e: Exception) {
+            Log.e("CarRepository", "Error filtering by brand: ${e.message}", e)
             emit(ApiResource(status = ApiStatus.ERROR, message = e.message ?: "Failed to load cars by brand"))
         }
     }
@@ -510,26 +558,34 @@ class CarRepositoryImpl @Inject constructor(
         emit(ApiResource(status = ApiStatus.LOADING))
         try {
             if (useMockData) {
-                Log.d("CarRepository", "Using mock car data for type: $type")
-                kotlinx.coroutines.delay(1000) // Simulate network delay
+                Log.d("CarRepository", "FILTER DEBUG: Using mock car data for type: '$type'")
+                kotlinx.coroutines.delay(500) // Shorter delay for testing
                 
-                // Use exact matching for type
-                val filteredCars = mockCars.filter { it.type.equals(type, ignoreCase = true) }
+                // Print all available types for debugging
+                val allTypes = mockCars.map { it.type }.distinct()
+                Log.d("CarRepository", "FILTER DEBUG: Available types in mock data: $allTypes")
                 
-                Log.d("CarRepository", "Found ${filteredCars.size} cars matching type '$type'")
+                // Use exact matching for type with detailed logging
+                val filteredCars = mockCars.filter { car ->
+                    val matches = car.type.equals(type, ignoreCase = true)
+                    Log.d("CarRepository", "FILTER DEBUG: Checking car ${car.id}: type='${car.type}' against '$type', matches=$matches")
+                    matches
+                }
+                
+                Log.d("CarRepository", "FILTER DEBUG: Found ${filteredCars.size} cars matching type '$type'")
                 filteredCars.forEach { car ->
-                    Log.d("CarRepository", "Car: ${car.brand} ${car.model}, Type: ${car.type}")
+                    Log.d("CarRepository", "FILTER DEBUG: Matched car: ${car.brand} ${car.model}, Type: ${car.type}")
                 }
                 
                 emit(ApiResource(status = ApiStatus.SUCCESS, data = filteredCars))
             } else {
                 val token = authPreferenceManager.getAuthToken() ?: throw IllegalStateException("Not authenticated")
-                // In a real implementation, you would call apiService.getCarsByType(type, "Bearer $token")
-                // For now, we'll just use getCarsByModel as a fallback since the API might not have a type endpoint
+                // Use getCarsByModel as a fallback since the API might not have a type endpoint
                 val cars = apiService.getCarsByModel(type, "Bearer $token")
                 emit(ApiResource(status = ApiStatus.SUCCESS, data = cars))
             }
         } catch (e: Exception) {
+            Log.e("CarRepository", "FILTER DEBUG: Error filtering by type: ${e.message}", e)
             emit(ApiResource(status = ApiStatus.ERROR, message = e.message ?: "Failed to load cars by type"))
         }
     }

@@ -2,6 +2,8 @@ package com.example.myapplication.di
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import com.example.myapplication.data.repository.CarRepository
+import com.example.myapplication.ui.screens.home.CarViewModel
 import com.example.myapplication.ui.screens.profile.ProfileViewModel
 import dagger.Binds
 import dagger.MapKey
@@ -11,6 +13,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.components.ActivityRetainedComponent
 import dagger.hilt.android.components.ViewModelComponent
 import dagger.hilt.android.internal.lifecycle.HiltViewModelMap
+import dagger.hilt.android.scopes.ViewModelScoped
 import dagger.hilt.components.SingletonComponent
 import dagger.multibindings.IntoMap
 import javax.inject.Singleton
@@ -25,6 +28,12 @@ abstract class ViewModelModule {
     @HiltViewModelMap
     @ViewModelKey(ProfileViewModel::class)
     abstract fun bindProfileViewModel(profileViewModel: ProfileViewModel): ViewModel
+    
+    @Binds
+    @IntoMap
+    @HiltViewModelMap
+    @ViewModelKey(CarViewModel::class)
+    abstract fun bindCarViewModel(carViewModel: CarViewModel): ViewModel
     
     // Add other ViewModel bindings here
     // Example:

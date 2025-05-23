@@ -137,6 +137,9 @@ fun NavGraph(
         Log.d("Navigation", "Navigated to: ${destination.route}")
     }
 
+    // Create a shared CarViewModel that will be used by both Home and Filter screens
+    val sharedCarViewModel = androidx.lifecycle.viewmodel.compose.viewModel<com.example.myapplication.ui.screens.home.CarViewModel>()
+
     NavHost(
         navController = navController,
         startDestination = startDestination.name
@@ -269,10 +272,10 @@ fun NavGraph(
         // Main Screens
         composable(Screen.Home.name) {
             HomeScreen(
+                viewModel = sharedCarViewModel,
                 onCarClick = { carId -> navController.navigate("${Screen.CarDetails.name}/$carId") },
                 onProfileClick = { navController.navigate(Screen.Profile.name) },
                 onFavoriteClick = { navController.navigate(Screen.Favorite.name) },
-                onFilterClick = { navController.navigate(Screen.Filter.name) },
                 onNotificationClick = { navController.navigate(Screen.Notification.name) },
                 onCatalogClick = { navController.navigate(Screen.MyBooking.name) }
             )
@@ -291,77 +294,13 @@ fun NavGraph(
             )
         }
 
-        composable(Screen.Filter.name) {
-            val homeViewModel = hiltViewModel<com.example.myapplication.ui.screens.home.CarViewModel>()
-            
-            Filter(
-                onBackClick = { navController.popBackStack() },
-                onApplyFilters = { filterParams -> 
-                    // Apply the filters in the view model
-                    Log.d("NavGraph", "Applying filters: $filterParams")
-                    
-                    // Log details about each filter to help debug
-                    if (filterParams.type != null) {
-                        Log.d("NavGraph", "Type filter: ${filterParams.type}")
-                    }
-                    if (filterParams.brand != null) {
-                        Log.d("NavGraph", "Brand filter: ${filterParams.brand}")
-                    }
-                    if (filterParams.minRating > 0) {
-                        Log.d("NavGraph", "Rating filter: ${filterParams.minRating}")
-                    }
-                    Log.d("NavGraph", "Max price: ${filterParams.maxPrice}")
-                    
-                    // Handle different filter combinations
-                    when {
-                        // If we have only a type filter, use the specific type filter method
-                        filterParams.type != null && filterParams.brand == null -> {
-                            Log.d("NavGraph", "Using filterByType with type: '${filterParams.type}'")
-                            homeViewModel.filterByType(filterParams.type)
-                        }
-                        
-                        // If we have only a brand filter, use the specific brand filter method
-                        filterParams.brand != null && filterParams.type == null -> {
-                            Log.d("NavGraph", "Using filterByBrand with brand: '${filterParams.brand}'")
-                            homeViewModel.filterByBrand(filterParams.brand)
-                        }
-                        
-                        // If we have only a rating filter, use the specific rating filter method
-                        filterParams.minRating > 0 && filterParams.type == null && filterParams.brand == null -> {
-                            Log.d("NavGraph", "Using filterByRatingRange with rating: ${filterParams.minRating}")
-                            homeViewModel.filterByRatingRange(
-                                minRating = filterParams.minRating.toLong(),
-                                maxRating = 5
-                            )
-                        }
-                        
-                        // For combinations of filters, use the combined filter method
-                        else -> {
-                            Log.d("NavGraph", "Using loadCarsWithFilters with multiple filters")
-                            Log.d("NavGraph", "  - Type: '${filterParams.type}'")
-                            Log.d("NavGraph", "  - Brand: '${filterParams.brand}'")
-                            Log.d("NavGraph", "  - Rating: ${filterParams.minRating}")
-                            
-                            homeViewModel.loadCarsWithFilters(
-                                brand = filterParams.brand,
-                                model = filterParams.type,
-                                minRating = if (filterParams.minRating > 0) filterParams.minRating.toLong() else null,
-                                maxRating = 5L
-                            )
-                        }
-                    }
-                    
-                    // Navigate back to home screen
-                    navController.popBackStack()
-                },
-                onResetFilters = {
-                    // Reset filters in view model
-                    Log.d("NavGraph", "Resetting filters")
-                    homeViewModel.loadAllCars()
-                    navController.popBackStack()
-                }
-            )
-        }
+        // Filter Screen - no longer needed since we're handling filters in the HomeScreen
+        // composable(Screen.Filter.name) {
+        //     Filter(
+        //         viewModel = sharedCarViewModel,
+        //         onBackClick = { navController.popBackStack() }
+        //     )
+        // }
 
         composable(Screen.Notification.name) {
             NotificationScreen(

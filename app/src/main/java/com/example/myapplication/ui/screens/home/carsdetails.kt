@@ -147,41 +147,41 @@ fun CarDetailsScreen(
             }
         } else if (car != null) {
             // Car details content
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+        ) {
+            // Top Car Image Section with Back Button and Favorite Button
+            TopImageSection(
+                isFavorite = isFavorite,
+                onFavoriteClick = { isFavorite = !isFavorite },
+                onBackPressed = onBackPressed,
+                    title = "${car?.brand} ${car?.model}",
+                showFavorite = true
+            )
+
+            // Car Info Section
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(scrollState)
+                    .fillMaxWidth()
+                    .background(Color(0xFFF2F5FA))
+                    .padding(horizontal = 15.dp, vertical = 10.dp)
             ) {
-                // Top Car Image Section with Back Button and Favorite Button
-                TopImageSection(
-                    isFavorite = isFavorite,
-                    onFavoriteClick = { isFavorite = !isFavorite },
-                    onBackPressed = onBackPressed,
-                    title = "${car?.brand} ${car?.model}",
-                    showFavorite = true
-                )
-
-                // Car Info Section
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color(0xFFF2F5FA))
-                        .padding(horizontal = 15.dp, vertical = 10.dp)
-                ) {
                     // Top Row - Transmission and Rating
                     CarTagAndRating(
                         transmission = car?.transmission ?: "Auto",
                         rating = car?.rating?.toFloat() ?: 4.5f
                     )
 
-                    // Car Name
+                // Car Name
                     CarNameSection(
                         carName = "${car?.brand} ${car?.model}",
                         year = car?.year?.toString() ?: "2024"
                     )
 
-                    // Tabs (About & Gallery)
-                    TabsSection(onGalleryClick = onGalleryClick)
+                // Tabs (About & Gallery)
+                TabsSection(onGalleryClick = onGalleryClick)
 
                     // Car Details
                     car?.let { carData ->

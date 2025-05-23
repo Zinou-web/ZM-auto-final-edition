@@ -12,7 +12,7 @@ import timber.log.Timber
 import javax.inject.Inject
 
 @HiltAndroidApp
-class RentalCarApp : Application(), Configuration.Provider {
+open class RentalCarApp : Application(), Configuration.Provider {
     
     @Inject
     lateinit var workerFactory: HiltWorkerFactory

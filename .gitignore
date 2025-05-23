@@ -50,3 +50,5 @@ google-services.json
 
 # Version control
 vcs.xml
+backend_temp/
+new_repo/
