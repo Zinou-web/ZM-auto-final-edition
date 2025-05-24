@@ -2,19 +2,17 @@ package com.example.myapplication.di
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import com.example.myapplication.data.repository.CarRepository
 import com.example.myapplication.ui.screens.home.CarViewModel
-import com.example.myapplication.ui.screens.home.ReservationViewModel
+import com.example.myapplication.ui.screens.BookingCar.ReservationViewModel
+import com.example.myapplication.ui.screens.payment.PaymentViewModel
 import com.example.myapplication.ui.screens.profile.ProfileViewModel
 import dagger.Binds
 import dagger.MapKey
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
-import dagger.hilt.android.components.ActivityRetainedComponent
 import dagger.hilt.android.components.ViewModelComponent
 import dagger.hilt.android.internal.lifecycle.HiltViewModelMap
-import dagger.hilt.android.scopes.ViewModelScoped
 import dagger.hilt.components.SingletonComponent
 import dagger.multibindings.IntoMap
 import javax.inject.Singleton
@@ -41,6 +39,11 @@ abstract class ViewModelModule {
     @HiltViewModelMap
     @ViewModelKey(ReservationViewModel::class)
     abstract fun bindReservationViewModel(reservationViewModel: ReservationViewModel): ViewModel
+    
+    @Binds
+    @IntoMap
+    @ViewModelKey(PaymentViewModel::class)
+    abstract fun bindPaymentViewModel(viewModel: PaymentViewModel): ViewModel
     
     // Add other ViewModel bindings here
     // Example:

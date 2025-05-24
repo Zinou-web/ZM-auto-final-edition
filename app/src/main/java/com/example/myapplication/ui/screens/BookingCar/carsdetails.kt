@@ -1,4 +1,4 @@
-package com.example.myapplication.ui.screens.home
+package com.example.myapplication.ui.screens.BookingCar
 
 
 
@@ -32,8 +32,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.myapplication.R
 import com.example.myapplication.ui.theme.poppins
-import androidx.hilt.navigation.compose.hiltViewModel
 import android.widget.Toast
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import androidx.compose.ui.platform.LocalContext
+import android.content.Intent
+import android.net.Uri
+import com.example.myapplication.ui.screens.home.CarUiState
+import com.example.myapplication.ui.screens.home.CarViewModel
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -147,49 +153,78 @@ fun CarDetailsScreen(
             }
         } else if (car != null) {
             // Car details content
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(scrollState)
-        ) {
-            // Top Car Image Section with Back Button and Favorite Button
-            TopImageSection(
-                isFavorite = isFavorite,
-                onFavoriteClick = { isFavorite = !isFavorite },
-                onBackPressed = onBackPressed,
-                    title = "${car?.brand} ${car?.model}",
-                showFavorite = true
-            )
-
-            // Car Info Section
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFFF2F5FA))
-                    .padding(horizontal = 15.dp, vertical = 10.dp)
+                    .fillMaxSize()
+                    .verticalScroll(scrollState)
             ) {
-                    // Top Row - Transmission and Rating
-                    CarTagAndRating(
-                        transmission = car?.transmission ?: "Auto",
-                        rating = car?.rating?.toFloat() ?: 4.5f
+                // Top Car Image Section with Back Button and Favorite Button
+                TopImageSection(
+                    imageUrl = car?.picture,
+                    isFavorite = isFavorite,
+                    onFavoriteClick = { isFavorite = !isFavorite },
+                    onBackPressed = onBackPressed,
+                    title = "${car?.brand} ${car?.model}",
+                    showFavorite = true
+                )
+
+                // Car Info Section
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFFF2F5FA))
+                        .padding(horizontal = 15.dp, vertical = 10.dp)
+                ) {
+                        // Top Row - Transmission and Rating
+                        CarTagAndRating(
+                            transmission = car?.transmission ?: "Auto",
+                            rating = car?.rating?.toFloat() ?: 4.5f
+                        )
+
+                    // Car Name
+                        CarNameSection(
+                            carName = "${car?.brand} ${car?.model}",
+                            year = car?.year?.toString() ?: "2024"
+                        )
+
+                    // Tabs (About & Gallery)
+                    TabsSection(onGalleryClick = onGalleryClick)
+
+                    // Car Renter Section - Moved before Specifications
+                    CarRenterSection(
+                        onChatClick = {
+                            // Toast.makeText(context, "Chat clicked", Toast.LENGTH_SHORT).show()
+                            val phoneNumber = "0123456789" // Placeholder
+                            val intent = Intent(Intent.ACTION_VIEW).apply {
+                                data = Uri.parse("sms:$phoneNumber")
+                            }
+                            try {
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "No messaging app found", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        onCallClick = {
+                            // Toast.makeText(context, "Call clicked", Toast.LENGTH_SHORT).show()
+                            val phoneNumber = "0123456789" // Placeholder
+                            val intent = Intent(Intent.ACTION_DIAL).apply {
+                                data = Uri.parse("tel:$phoneNumber")
+                            }
+                            try {
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "No calling app found", Toast.LENGTH_SHORT).show()
+                            }
+                        }
                     )
 
-                // Car Name
-                    CarNameSection(
-                        carName = "${car?.brand} ${car?.model}",
-                        year = car?.year?.toString() ?: "2024"
-                    )
-
-                // Tabs (About & Gallery)
-                TabsSection(onGalleryClick = onGalleryClick)
-
-                    // Car Details
+                    // Car Details (Specifications)
                     car?.let { carData ->
                         CarDetailsContent(car = carData)
                     }
                 }
 
-                // Price and Book Now Section - Moved outside the column for full width
+                // Price and Book Now Section
                 PriceAndBookSection(
                     price = "${car?.rentalPricePerDay}DA",
                     onBookNowClick = onBookNowClick
@@ -206,28 +241,6 @@ fun CarDetailsContent(car: com.example.myapplication.data.model.Car) {
             .fillMaxWidth()
             .padding(vertical = 16.dp)
     ) {
-        // Car description
-        Text(
-            text = "Description",
-            fontSize = 18.sp,
-            fontFamily = poppins,
-            fontWeight = FontWeight.SemiBold,
-            color = Color.Black
-        )
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        Text(
-            text = car.description ?: "No description available for this car.",
-            fontSize = 14.sp,
-            fontFamily = poppins,
-            fontWeight = FontWeight.Normal,
-            color = Color.Gray,
-            lineHeight = 24.sp
-        )
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
         // Car specifications
         Text(
             text = "Specifications",
@@ -397,28 +410,16 @@ fun CarNameSection(
     carName: String,
     year: String
 ) {
-    Row(
+    Text(
+        text = "$carName $year",
+        fontSize = 19.sp,
+        fontFamily = poppins,
+        fontWeight = FontWeight.SemiBold,
+        color = Color.Black,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = carName,
-            fontSize = 20.sp,
-            fontFamily = poppins,
-            fontWeight = FontWeight.Bold,
-            color = Color.Black
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = year,
-            fontSize = 20.sp,
-            fontFamily = poppins,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF149459)
-        )
-    }
+            .padding(top = 4.dp, bottom = 20.dp)
+    )
 }
 
 @Composable
@@ -426,53 +427,61 @@ fun PriceAndBookSection(
     price: String,
     onBookNowClick: () -> Unit
 ) {
-    Card(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 15.dp, vertical = 16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            .height(120.dp)
+            .padding(top = 30.dp)
+            .background(Color(0xFFF2F5FA))
+            .border(
+                width = 2.dp,
+                color = Color.White,
+                shape = RoundedCornerShape(15.dp)
+            )
+            .padding(vertical = 20.dp)
+            .padding(horizontal = 15.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+                .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
                 Text(
                     text = "Price",
-                    fontSize = 14.sp,
+                    fontSize = 15.sp,
                     fontFamily = poppins,
-                    fontWeight = FontWeight.Medium,
-                    color = Color.Gray
+                    fontWeight = FontWeight.Normal,
+                    color = Color.Black
                 )
                 Text(
                     text = "$price/day",
-                    fontSize = 20.sp,
+                    fontSize = 21.sp,
                     fontFamily = poppins,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF149459)
+                    fontWeight = FontWeight.Normal,
+                    color = Color.Black
                 )
             }
-            
+
+            Spacer(modifier = Modifier.weight(1f))
+
             Button(
-                onClick = onBookNowClick,
+                onClick = { onBookNowClick() },
+                modifier = Modifier
+                    .height(40.dp)
+                    .width(150.dp),
+                shape = RoundedCornerShape(50.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFF149459)
-                ),
-                shape = RoundedCornerShape(8.dp),
-                modifier = Modifier
-                    .height(50.dp)
-                    .width(130.dp)
+                )
             ) {
                 Text(
                     text = "Book Now",
-                    fontSize = 16.sp,
+                    fontSize = 18.sp,
                     fontFamily = poppins,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White
                 )
             }
         }
@@ -481,6 +490,7 @@ fun PriceAndBookSection(
 
 @Composable
 fun TopImageSection(
+    imageUrl: String?,
     isFavorite: Boolean,
     onFavoriteClick: () -> Unit,
     onBackPressed: () -> Unit,
@@ -492,15 +502,20 @@ fun TopImageSection(
             .fillMaxWidth()
             .height(390.dp)
     ) {
-        // Main car image
-        Image(
-            painter = painterResource(id = R.drawable.ic_launcher_background),
-            contentDescription = "Car Image",
-            contentScale = ContentScale.FillBounds,
+        // Main car image - now using AsyncImage
+        AsyncImage(
+            model = ImageRequest.Builder(LocalContext.current)
+                .data(imageUrl)
+                .crossfade(true)
+                .placeholder(R.drawable.car_placeholder) // Changed from ic_launcher_background
+                .error(R.drawable.car_placeholder) // Changed from error_placeholder
+                .build(),
+            contentDescription = title, // Use car title as content description
+            contentScale = ContentScale.Crop, // Changed to Crop for better fitting generally
             modifier = Modifier.fillMaxSize()
         )
 
-        // Title at the top center - Now using the passed title parameter
+        // Title at the top center
         Text(
             text = title,
             fontSize = 23.sp,
@@ -664,7 +679,7 @@ fun TabsSection(onGalleryClick: () -> Unit = {}) {
                 .fillMaxWidth()
                 .height(2.dp)
         ) {
-            // Green divider under "About" (half width)
+            // Green divider under "About" (active tab)
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -672,7 +687,7 @@ fun TabsSection(onGalleryClick: () -> Unit = {}) {
                     .background(Color(0xFF149459))
             )
 
-            // Gray divider under "Gallery" (half width)
+            // Gray divider under "Gallery" (inactive tab)
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -684,7 +699,10 @@ fun TabsSection(onGalleryClick: () -> Unit = {}) {
 }
 
 @Composable
-fun CarRenterSection() {
+fun CarRenterSection(
+    onChatClick: () -> Unit,
+    onCallClick: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -715,7 +733,7 @@ fun CarRenterSection() {
                 .padding(horizontal = 12.dp)
         ) {
             Text(
-                text = "ZM Auto",
+                text = "Rental Company",
                 fontSize = 16.sp,
                 fontFamily = poppins,
                 fontWeight = FontWeight.SemiBold,
@@ -723,7 +741,7 @@ fun CarRenterSection() {
             )
 
             Text(
-                text = "Help Service",
+                text = "Customer Service",
                 fontSize = 9.sp,
                 fontFamily = poppins,
                 fontWeight = FontWeight.SemiBold,
@@ -737,7 +755,8 @@ fun CarRenterSection() {
                 .size(55.dp)
                 .clip(CircleShape)
                 .background(Color.White)
-                .border(1.dp, Color.LightGray.copy(alpha = 0.3f), CircleShape),
+                .border(1.dp, Color.LightGray.copy(alpha = 0.3f), CircleShape)
+                .clickable { onChatClick() },
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -756,7 +775,8 @@ fun CarRenterSection() {
                 .size(55.dp)
                 .clip(CircleShape)
                 .background(Color.White)
-                .border(1.dp, Color.LightGray.copy(alpha = 0.3f), CircleShape),
+                .border(1.dp, Color.LightGray.copy(alpha = 0.3f), CircleShape)
+                .clickable { onCallClick() },
             contentAlignment = Alignment.Center
         ) {
             Icon(

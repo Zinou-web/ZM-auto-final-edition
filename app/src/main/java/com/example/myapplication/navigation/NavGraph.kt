@@ -1,34 +1,27 @@
 package com.example.myapplication.navigation
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
+import android.content.Context
+import android.util.Log
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
-import android.util.Log
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.myapplication.ui.screens.auth.CreateAccountScreen
 import com.example.myapplication.ui.screens.auth.NewPasswordScreen
 import com.example.myapplication.ui.screens.auth.SignInScreen
-import com.example.myapplication.ui.screens.home.CarDetailsScreen
-import com.example.myapplication.ui.screens.home.Filter
-import com.example.myapplication.ui.screens.home.GalleryScreen
+import com.example.myapplication.ui.screens.BookingCar.CarDetailsScreen
+import com.example.myapplication.ui.screens.BookingCar.GalleryScreen
 import com.example.myapplication.ui.screens.home.HomeScreen
 import com.example.myapplication.ui.screens.home.NotificationScreen
-import com.example.myapplication.ui.screens.home.bookings.CompletedBookingsScreen
-import com.example.myapplication.ui.screens.home.bookings.MyBookingsScreen
+import com.example.myapplication.ui.screens.bookings.CompletedBookingsScreen
+import com.example.myapplication.ui.screens.bookings.MyBookingsScreen
 import com.example.myapplication.ui.screens.payment.BillScreen
-import com.example.myapplication.ui.screens.payment.CancelationScreen
+import com.example.myapplication.ui.screens.bookings.CancelationScreen
 import com.example.myapplication.ui.screens.payment.EdahabiaScreen
 import com.example.myapplication.ui.screens.payment.FavoriteScreen
 import com.example.myapplication.ui.screens.payment.PaymentDoneScreen
@@ -48,22 +41,15 @@ import com.example.myapplication.ui.screens.welcome.SecondScreen
 import com.example.myapplication.ui.screens.welcome.ThirdScreen
 import com.example.myapplication.ui.screens.splashscreen.SplashScreenSequence
 import com.example.myapplication.ui.screens.auth.CompleteProfileScreen
-import com.example.myapplication.ui.screens.home.CarBookingScreen as HomeCarBookingScreen
-import com.example.myapplication.ui.screens.payment.CarBookingScreen as PaymentCarBookingScreen
+import com.example.myapplication.ui.screens.BookingCar.CarBookingScreen
 import com.example.myapplication.ui.screens.password.ChangePasswordScreen
 import com.example.myapplication.ui.screens.auth.OTPVerificationScreen
 import com.example.myapplication.ui.screens.auth.ForgotPasswordScreen
 import com.example.myapplication.ui.screens.auth.ResetPasswordScreen
-import androidx.hilt.navigation.compose.hiltViewModel
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import androidx.compose.foundation.CircularProgressIndicator
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.ui.graphics.Color
+import com.example.myapplication.ui.screens.home.CompleteYourBookingScreen
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.myapplication.data.preference.AuthPreferenceManager
+import com.example.myapplication.ui.screens.home.BookingViewModel
 
 /**
  * Enum class that contains all the possible screens in our app
@@ -143,24 +129,37 @@ fun NavGraph(
         Log.d("Navigation", "Navigated to: ${destination.route}")
     }
 
+    // Get the context for creating the AuthPreferenceManager
+    val context = LocalContext.current
+    
     // Create a shared CarViewModel that will be used by both Home and Filter screens
-    val sharedCarViewModel = androidx.lifecycle.viewmodel.compose.viewModel<com.example.myapplication.ui.screens.home.CarViewModel>()
-
+    val sharedCarViewModel = viewModel<com.example.myapplication.ui.screens.home.CarViewModel>()
+    
+    // Create a shared BookingViewModel for the booking flow
+    val sharedBookingViewModel = viewModel<BookingViewModel>()
+    
     NavHost(
         navController = navController,
         startDestination = startDestination.name
     ) {
         // Splash Screen Sequence
         composable(Screen.SplashSequence.name) {
+            // Return to original flow: Splash → Welcome
             SplashScreenSequence(
-                onNavigateToWelcome = { navController.navigate(Screen.Welcome.name) }
+                onNavigateToWelcome = { 
+                    // Navigate to Welcome screen as originally intended
+                    navController.navigate(Screen.Welcome.name)
+                }
             )
         }
 
         // Onboarding Screens
         composable(Screen.Welcome.name) {
             WelcomeScreen(
-                onNextClick = { navController.navigate(Screen.Second.name) }
+                onNextClick = { 
+                    // Navigate to Second screen as originally intended
+                    navController.navigate(Screen.Second.name)
+                }
             )
         }
 
@@ -175,7 +174,13 @@ fun NavGraph(
         composable(Screen.Third.name) {
             ThirdScreen(
                 onBackClick = { navController.popBackStack() },
-                onNextClick = { navController.navigate(Screen.SignIn.name) }
+                onNextClick = { 
+                    Log.d("Navigation", "ThirdScreen: Next button clicked, navigating to SignIn")
+                    navController.navigate(Screen.SignIn.name) {
+                        // Clear back stack up to Third screen
+                        popUpTo(Screen.Third.name) { inclusive = true }
+                    }
+                }
             )
         }
 
@@ -295,8 +300,11 @@ fun NavGraph(
             CarDetailsScreen(
                 carId = carId,
                 onBackPressed = { navController.popBackStack() },
-                onGalleryClick = { navController.navigate(Screen.Gallery.name) },
-                onBookNowClick = { navController.navigate("${Screen.CarBooking.name}/$carId") }
+                onGalleryClick = { navController.navigate("${Screen.Gallery.name}/$carId") },
+                onBookNowClick = { 
+                    Log.d("NavGraph", "CarDetailsScreen: Navigating to CarBookingScreen with carId: $carId")
+                    navController.navigate("${Screen.CarBooking.name}/$carId") // Pass carId to CarBookingScreen
+                }
             )
         }
 
@@ -311,6 +319,34 @@ fun NavGraph(
         composable(Screen.Notification.name) {
             NotificationScreen(
                 onBackPressed = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = "${Screen.Gallery.name}/{carId}",
+            arguments = listOf(navArgument("carId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val carId = backStackEntry.arguments?.getString("carId")
+            GalleryScreen(
+                carId = carId,
+                onBackPressed = { navController.popBackStack() },
+                onAboutClick = { 
+                    if (carId != null) {
+                        navController.navigate("${Screen.CarDetails.name}/$carId") {
+                            popUpTo("${Screen.Gallery.name}/$carId") { inclusive = true }
+                        }
+                    } else {
+                        navController.popBackStack()
+                    }
+                },
+                onBookNowClick = { 
+                    Log.d("NavGraph", "GalleryScreen: Navigating to CarBookingScreen with carId: $carId")
+                    if (carId != null) {
+                        navController.navigate("${Screen.CarBooking.name}/$carId") // Pass carId to CarBookingScreen
+                    } else {
+                        navController.navigate(Screen.CarBooking.name)
+                    }
+                }
             )
         }
 
@@ -350,61 +386,6 @@ fun NavGraph(
             )
         }
 
-        composable(
-            route = "${Screen.CarBooking.name}/{carId}",
-            arguments = listOf(navArgument("carId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val carId = backStackEntry.arguments?.getString("carId") ?: ""
-            val carViewModel: CarViewModel = hiltViewModel()
-            val reservationViewModel: ReservationViewModel = hiltViewModel()
-            
-            // State to track the loaded car
-            val carDetailsState by carViewModel.carDetailsState.collectAsState()
-            var car by remember { mutableStateOf<com.example.myapplication.data.model.Car?>(null) }
-            
-            // Load car details when screen is first displayed
-            LaunchedEffect(carId) {
-                carId.toLongOrNull()?.let { id ->
-                    carViewModel.loadCarById(id)
-                }
-            }
-            
-            // Update car state when data is loaded
-            LaunchedEffect(carDetailsState) {
-                when (carDetailsState) {
-                    is CarUiState.SingleCarSuccess -> {
-                        car = (carDetailsState as CarUiState.SingleCarSuccess).car
-                    }
-                    else -> {}
-                }
-            }
-            
-            // Display loading or car booking screen based on state
-            if (carDetailsState is CarUiState.Loading || car == null) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = Color(0xFF149459))
-                }
-            } else {
-                HomeCarBookingScreen(
-                    car = car!!,
-                    viewModel = reservationViewModel,
-                    onBackPressed = { navController.popBackStack() },
-                    onContinue = { navController.navigate(Screen.CompleteYourBooking.name) }
-                )
-            }
-        }
-
-        composable(Screen.CompleteYourBooking.name) {
-            PaymentCarBookingScreen(
-                onBackClick = { navController.popBackStack() },
-                onContinueClick = { navController.navigate(Screen.PaymentMethod.name) },
-                onRebookClick = { navController.navigate("${Screen.CarDetails.name}/1") }
-            )
-        }
-
         // Favorite Screen
         composable(Screen.Favorite.name) {
             FavoriteScreen(
@@ -415,14 +396,6 @@ fun NavGraph(
                 onCarClick = { carId -> 
                     navController.navigate("${Screen.CarDetails.name}/$carId")
                 }
-            )
-        }
-
-        composable(Screen.Gallery.name) {
-            GalleryScreen(
-                onBackPressed = { navController.popBackStack() },
-                onAboutClick = { navController.popBackStack() },
-                onBookNowClick = { navController.navigate(Screen.CarBooking.name) }
             )
         }
 
@@ -442,31 +415,17 @@ fun NavGraph(
             )
         }
 
-        composable(Screen.PaymentDone.name) {
-            PaymentDoneScreen(
-                onBackToMainClick = { navController.navigateAndClear(Screen.Home.name) }
-            )
-        }
-
-        composable(Screen.PaymentPending.name) {
-            PaymentPending(
-                onBackToMainClick = { navController.navigateAndClear(Screen.Home.name) }
-            )
-        }
-
-        composable(Screen.UnsuccessfulPayment.name) {
-            UnsuccessfulPaymentScreen(
-                onBackClick = { navController.popBackStack() },
-                onTryAgainClick = { navController.navigate(Screen.PaymentMethod.name) }
-            )
-        }
-
         composable(Screen.Bill.name) {
             BillScreen(
                 onBackClick = { navController.popBackStack() },
                 onContinueClick = { 
+                    // On confirm payment, navigate to payment done screen
+                    // In a real app, this would check payment success/failure
                     navController.navigate(Screen.PaymentDone.name)
-                }
+                    // To show unsuccessful payment in case of failure:
+                    // navController.navigate(Screen.UnsuccessfulPayment.name)
+                },
+                viewModel = sharedBookingViewModel
             )
         }
 
@@ -528,6 +487,61 @@ fun NavGraph(
             ChangePasswordScreen(
                 onBackClick = { navController.popBackStack() },
                 onPasswordChangeSuccess = { navController.popBackStack() }
+            )
+        }
+
+        // CarBookingScreen route (with/without driver selection) - updated to accept carId
+        composable(
+            route = "${Screen.CarBooking.name}/{carId}",
+            arguments = listOf(navArgument("carId") { 
+                type = NavType.StringType 
+                defaultValue = ""
+                nullable = true
+            })
+        ) { backStackEntry ->
+            val carId = backStackEntry.arguments?.getString("carId")
+            
+            CarBookingScreen(
+                carId = carId,
+                onBackPressed = { navController.popBackStack() },
+                onContinue = {
+                    // Navigate to CompleteYourBookingScreen now
+                    Log.d("NavGraph", "CarBookingScreen: Continue clicked, navigating to CompleteYourBooking")
+                    navController.navigate(Screen.CompleteYourBooking.name)
+                },
+                bookingViewModel = sharedBookingViewModel
+            )
+        }
+        
+        // Add the CompleteYourBookingScreen route back
+        composable(Screen.CompleteYourBooking.name) {
+            CompleteYourBookingScreen(
+                onBackPressed = { navController.popBackStack() },
+                onContinue = { 
+                    // Navigate to payment method screen
+                    Log.d("NavGraph", "CompleteYourBookingScreen: Continue clicked, navigating to PaymentMethod")
+                    navController.navigate(Screen.PaymentMethod.name)
+                },
+                bookingViewModel = sharedBookingViewModel
+            )
+        }
+
+        composable(Screen.PaymentPending.name) {
+            PaymentPending(
+                onBackToMainClick = { navController.navigateAndClear(Screen.Home.name) }
+            )
+        }
+
+        composable(Screen.PaymentDone.name) {
+            PaymentDoneScreen(
+                onBackToMainClick = { navController.navigateAndClear(Screen.Home.name) }
+            )
+        }
+
+        composable(Screen.UnsuccessfulPayment.name) {
+            UnsuccessfulPaymentScreen(
+                onBackClick = { navController.popBackStack() },
+                onTryAgainClick = { navController.navigate(Screen.PaymentMethod.name) }
             )
         }
     }

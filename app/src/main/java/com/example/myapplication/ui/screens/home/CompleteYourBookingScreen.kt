@@ -1,7 +1,8 @@
-package com.example.myapplication.ui.screens.payment
+package com.example.myapplication.ui.screens.home
 
-// Removed AnimatedVisibility import
-import androidx.compose.foundation.Image
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -11,73 +12,117 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.myapplication.R
+import androidx.compose.ui.zIndex
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.ui.theme.poppins
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CompleteYourBookingScreen(
-    onBackClick: () -> Unit,
-    onContinueClick: () -> Unit
+    onBackPressed: () -> Unit = {},
+    onContinue: () -> Unit = {},
+    bookingViewModel: BookingViewModel = viewModel()
 ) {
-    val screenWidth = LocalConfiguration.current.screenWidthDp.dp
-    val topPadding = with(LocalDensity.current) {
-        WindowInsets.statusBars.getTop(this).toDp()
-    }
-
-    // Form state
-    var fullName by remember { mutableStateOf("") }
+    // Context for file operations
+    val context = LocalContext.current
+    
+    // Form state variables
+    var firstName by remember { mutableStateOf("") }
+    var lastName by remember { mutableStateOf("") }
     var phoneNumber by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var selectedWilaya by remember { mutableStateOf("") }
     var hasDriverLicense by remember { mutableStateOf(false) }
-    var isSubmitting by remember { mutableStateOf(false) }
-
+    var driverLicenseUri by remember { mutableStateOf<Uri?>(null) }
+    var driverLicenseFileName by remember { mutableStateOf("") }
+    
     // Form validation state
-    var fullNameError by remember { mutableStateOf<String?>(null) }
+    var firstNameError by remember { mutableStateOf<String?>(null) }
+    var lastNameError by remember { mutableStateOf<String?>(null) }
     var phoneNumberError by remember { mutableStateOf<String?>(null) }
     var emailError by remember { mutableStateOf<String?>(null) }
     var wilayaError by remember { mutableStateOf<String?>(null) }
     var driverLicenseError by remember { mutableStateOf<String?>(null) }
-
+    var isSubmitting by remember { mutableStateOf(false) }
+    
+    // PDF document launcher for driver license
+    val pdfLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            driverLicenseUri = it
+            
+            // Get file name from URI
+            val contentResolver = context.contentResolver
+            val cursor = contentResolver.query(it, null, null, null, null)
+            cursor?.use { c ->
+                if (c.moveToFirst()) {
+                    val displayNameIndex = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                    if (displayNameIndex != -1) {
+                        driverLicenseFileName = c.getString(displayNameIndex)
+                    } else {
+                        driverLicenseFileName = "license_${System.currentTimeMillis()}.pdf"
+                    }
+                }
+            }
+            
+            hasDriverLicense = true
+            driverLicenseError = null
+        }
+    }
+    
+    // Available wilayas
+    val wilayas = listOf("Algiers", "Oran", "Blida", "Setif", "Constantine", "Annaba", "Tlemcen", "Batna")
+    
     // Validation functions
-    fun validateFullName(): Boolean {
-        return if (fullName.isBlank()) {
-            fullNameError = "Name is required"
+    fun validateFirstName(): Boolean {
+        return if (firstName.isBlank()) {
+            firstNameError = "First name is required"
             false
-        } else if (fullName.length < 3) {
-            fullNameError = "Name is too short"
+        } else if (firstName.length < 2) {
+            firstNameError = "Name is too short"
             false
         } else {
-            fullNameError = null
+            firstNameError = null
             true
         }
     }
-
+    
+    fun validateLastName(): Boolean {
+        return if (lastName.isBlank()) {
+            lastNameError = "Last name is required"
+            false
+        } else if (lastName.length < 2) {
+            lastNameError = "Name is too short"
+            false
+        } else {
+            lastNameError = null
+            true
+        }
+    }
+    
     fun validatePhoneNumber(): Boolean {
         return if (phoneNumber.isBlank()) {
             phoneNumberError = "Phone number is required"
             false
-        } else if (!phoneNumber.matches(Regex("^\\+?[0-9]{10,13}$"))) {
+        } else if (!phoneNumber.matches(Regex("^[0-9]{10,13}$"))) {
             phoneNumberError = "Enter a valid phone number"
             false
         } else {
@@ -85,7 +130,7 @@ fun CompleteYourBookingScreen(
             true
         }
     }
-
+    
     fun validateEmail(): Boolean {
         val emailRegex = Regex("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\$")
         return if (email.isBlank()) {
@@ -99,7 +144,7 @@ fun CompleteYourBookingScreen(
             true
         }
     }
-
+    
     fun validateWilaya(): Boolean {
         return if (selectedWilaya.isBlank()) {
             wilayaError = "Please select a wilaya"
@@ -109,9 +154,9 @@ fun CompleteYourBookingScreen(
             true
         }
     }
-
+    
     fun validateDriverLicense(): Boolean {
-        return if (!hasDriverLicense) {
+        return if (!hasDriverLicense || driverLicenseUri == null) {
             driverLicenseError = "Driver license is required"
             false
         } else {
@@ -119,81 +164,82 @@ fun CompleteYourBookingScreen(
             true
         }
     }
-
+    
     fun validateForm(): Boolean {
-        val nameValid = validateFullName()
+        val firstNameValid = validateFirstName()
+        val lastNameValid = validateLastName()
         val phoneValid = validatePhoneNumber()
         val emailValid = validateEmail()
         val wilayaValid = validateWilaya()
         val licenseValid = validateDriverLicense()
-
-        return nameValid && phoneValid && emailValid && wilayaValid && licenseValid
+        
+        return firstNameValid && lastNameValid && phoneValid && emailValid && wilayaValid && licenseValid
     }
-
-    // Available wilayas
-    val wilayas = listOf("Algiers", "Oran", "Blida", "Setif", "Constantine", "Annaba", "Tlemcen", "Batna")
-
+    
+    val topPadding = with(LocalDensity.current) {
+        WindowInsets.statusBars.getTop(this).toDp()
+    }
+    
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFF2F5FA))
     ) {
+        // Back Button at top left
+        Box(
+            modifier = Modifier
+                .padding(start = 15.dp, top = topPadding + 15.dp)
+                .size(45.dp)
+                .clip(CircleShape)
+                .background(Color.White)
+                .align(Alignment.TopStart)
+                .zIndex(1f) // Ensure back button stays on top
+                .clickable { onBackPressed() }
+        ) {
+            IconButton(
+                onClick = { onBackPressed() },
+                modifier = Modifier.size(45.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = Color.Black,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+        
+        // Title at the top center
+        Text(
+            text = "Complete Your Booking",
+            fontSize = 23.sp,
+            fontFamily = poppins,
+            fontWeight = FontWeight.SemiBold,
+            color = Color.Black,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = topPadding + 25.dp)
+        )
+        
+        // Main content in a scrollable column
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = topPadding)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.SpaceBetween
+                .padding(top = topPadding + 70.dp)
+                .padding(bottom = 96.dp) // Add padding at bottom for the button
         ) {
             Column(
                 modifier = Modifier
+                    .fillMaxWidth()
                     .weight(1f)
-                    .padding(horizontal = 16.dp)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Header
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 15.dp, vertical = 30.dp)
-                ) {
-                    // Back button
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.CenterStart)
-                            .size(45.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFFFFFFFF))
-                            .clickable { onBackClick() }
-                    ) {
-                        IconButton(
-                            onClick = { onBackClick() },
-                            modifier = Modifier.size(45.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
-                                tint = Color.Black,
-                                modifier = Modifier.size(32.dp)
-                            )
-                        }
-                    }
-
-                    // Title "My Bookings" at the center
-                    Text(
-                        text = "My Bookings",
-                        fontSize = 23.sp,
-                        fontFamily = poppins,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.Black,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
                 // Form Section Title
                 Card(
                     modifier = Modifier
+                        .fillMaxWidth()
                         .padding(vertical = 8.dp),
                     shape = RoundedCornerShape(10.dp),
                     colors = CardDefaults.cardColors(
@@ -203,42 +249,44 @@ fun CompleteYourBookingScreen(
                     Text(
                         text = "Renter Information",
                         style = MaterialTheme.typography.bodyLarge.copy(
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 16.sp
                         ),
                         modifier = Modifier
                             .padding(horizontal = 16.dp, vertical = 10.dp)
                     )
                 }
-
+                
                 Spacer(modifier = Modifier.height(16.dp))
-
-                // Name Field
+                
+                // First Name Field
                 Text(
-                    text = "Full Name",
+                    text = "First Name",
                     fontSize = 16.sp,
                     fontFamily = poppins,
                     fontWeight = FontWeight.Normal,
-                    color = Color.Black
+                    color = Color.Black,
+                    modifier = Modifier.align(Alignment.Start)
                 )
-
+                
                 Spacer(modifier = Modifier.height(8.dp))
-
+                
                 OutlinedTextField(
-                    value = fullName,
+                    value = firstName,
                     onValueChange = { 
-                        fullName = it
-                        if (fullNameError != null) validateFullName()
+                        firstName = it
+                        if (firstNameError != null) validateFirstName()
                     },
                     placeholder = { 
                         Text(
-                            text = "Enter your full name",
+                            text = "Example: Ahmed",
                             fontFamily = poppins,
                             fontWeight = FontWeight.Normal,
                             fontSize = 14.sp,
                             color = Color.Gray
                         ) 
                     },
-                    isError = fullNameError != null,
+                    isError = firstNameError != null,
                     singleLine = true,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -256,29 +304,91 @@ fun CompleteYourBookingScreen(
                         imeAction = ImeAction.Next
                     )
                 )
-
-                if (fullNameError != null) {
+                
+                if (firstNameError != null) {
                     Text(
-                        text = fullNameError ?: "",
+                        text = firstNameError ?: "",
                         color = Color.Red,
                         fontSize = 12.sp,
-                        modifier = Modifier.padding(start = 4.dp, top = 4.dp)
+                        modifier = Modifier
+                            .align(Alignment.Start)
+                            .padding(start = 4.dp, top = 4.dp)
                     )
                 }
-
+                
                 Spacer(modifier = Modifier.height(16.dp))
-
-                // Phone Number Field
+                
+                // Last Name Field
+                Text(
+                    text = "Last Name",
+                    fontSize = 16.sp,
+                    fontFamily = poppins,
+                    fontWeight = FontWeight.Normal,
+                    color = Color.Black,
+                    modifier = Modifier.align(Alignment.Start)
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                OutlinedTextField(
+                    value = lastName,
+                    onValueChange = { 
+                        lastName = it
+                        if (lastNameError != null) validateLastName()
+                    },
+                    placeholder = { 
+                        Text(
+                            text = "Example: Ahmad",
+                            fontFamily = poppins,
+                            fontWeight = FontWeight.Normal,
+                            fontSize = 14.sp,
+                            color = Color.Gray
+                        ) 
+                    },
+                    isError = lastNameError != null,
+                    singleLine = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFF149459),
+                        unfocusedBorderColor = Color.LightGray,
+                        errorBorderColor = Color.Red,
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White
+                    ),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Text,
+                        imeAction = ImeAction.Next
+                    )
+                )
+                
+                if (lastNameError != null) {
+                    Text(
+                        text = lastNameError ?: "",
+                        color = Color.Red,
+                        fontSize = 12.sp,
+                        modifier = Modifier
+                            .align(Alignment.Start)
+                            .padding(start = 4.dp, top = 4.dp)
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Phone Number Field with prefix
                 Text(
                     text = "Phone Number",
                     fontSize = 16.sp,
                     fontFamily = poppins,
                     fontWeight = FontWeight.Normal,
-                    color = Color.Black
+                    color = Color.Black,
+                    modifier = Modifier.align(Alignment.Start)
                 )
-
+                
                 Spacer(modifier = Modifier.height(8.dp))
-
+                
                 OutlinedTextField(
                     value = phoneNumber,
                     onValueChange = { 
@@ -301,7 +411,7 @@ fun CompleteYourBookingScreen(
                             fontWeight = FontWeight.Normal,
                             fontSize = 14.sp,
                             color = Color.Black,
-                            modifier = Modifier.padding(start = 16.dp)
+                            modifier = Modifier.padding(start = 16.dp, end = 8.dp)
                         )
                     },
                     isError = phoneNumberError != null,
@@ -322,29 +432,32 @@ fun CompleteYourBookingScreen(
                         imeAction = ImeAction.Next
                     )
                 )
-
+                
                 if (phoneNumberError != null) {
                     Text(
                         text = phoneNumberError ?: "",
                         color = Color.Red,
                         fontSize = 12.sp,
-                        modifier = Modifier.padding(start = 4.dp, top = 4.dp)
+                        modifier = Modifier
+                            .align(Alignment.Start)
+                            .padding(start = 4.dp, top = 4.dp)
                     )
                 }
-
+                
                 Spacer(modifier = Modifier.height(16.dp))
-
+                
                 // Email Field
                 Text(
                     text = "Email",
                     fontSize = 16.sp,
                     fontFamily = poppins,
                     fontWeight = FontWeight.Normal,
-                    color = Color.Black
+                    color = Color.Black,
+                    modifier = Modifier.align(Alignment.Start)
                 )
-
+                
                 Spacer(modifier = Modifier.height(8.dp))
-
+                
                 OutlinedTextField(
                     value = email,
                     onValueChange = { 
@@ -378,31 +491,34 @@ fun CompleteYourBookingScreen(
                         imeAction = ImeAction.Next
                     )
                 )
-
+                
                 if (emailError != null) {
                     Text(
                         text = emailError ?: "",
                         color = Color.Red,
                         fontSize = 12.sp,
-                        modifier = Modifier.padding(start = 4.dp, top = 4.dp)
+                        modifier = Modifier
+                            .align(Alignment.Start)
+                            .padding(start = 4.dp, top = 4.dp)
                     )
                 }
-
+                
                 Spacer(modifier = Modifier.height(16.dp))
-
+                
                 // Wilaya Dropdown
                 Text(
                     text = "Wilaya",
                     fontSize = 16.sp,
                     fontFamily = poppins,
                     fontWeight = FontWeight.Normal,
-                    color = Color.Black
+                    color = Color.Black,
+                    modifier = Modifier.align(Alignment.Start)
                 )
-
+                
                 Spacer(modifier = Modifier.height(8.dp))
-
+                
                 var expanded by remember { mutableStateOf(false) }
-
+                
                 ExposedDropdownMenuBox(
                     expanded = expanded,
                     onExpandedChange = { expanded = !expanded }
@@ -437,7 +553,7 @@ fun CompleteYourBookingScreen(
                         ),
                         isError = wilayaError != null
                     )
-
+                    
                     ExposedDropdownMenu(
                         expanded = expanded,
                         onDismissRequest = { expanded = false },
@@ -461,29 +577,32 @@ fun CompleteYourBookingScreen(
                         }
                     }
                 }
-
+                
                 if (wilayaError != null) {
                     Text(
                         text = wilayaError ?: "",
                         color = Color.Red,
                         fontSize = 12.sp,
-                        modifier = Modifier.padding(start = 4.dp, top = 4.dp)
+                        modifier = Modifier
+                            .align(Alignment.Start)
+                            .padding(start = 4.dp, top = 4.dp)
                     )
                 }
-
+                
                 Spacer(modifier = Modifier.height(16.dp))
-
+                
                 // Driver License Upload
                 Text(
                     text = "Driver License",
                     fontSize = 16.sp,
                     fontFamily = poppins,
                     fontWeight = FontWeight.Normal,
-                    color = Color.Black
+                    color = Color.Black,
+                    modifier = Modifier.align(Alignment.Start)
                 )
-
+                
                 Spacer(modifier = Modifier.height(8.dp))
-
+                
                 Card(
                     shape = RoundedCornerShape(14.dp),
                     colors = CardDefaults.cardColors(
@@ -501,8 +620,8 @@ fun CompleteYourBookingScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
-                                hasDriverLicense = true
-                                driverLicenseError = null
+                                // Launch PDF picker
+                                pdfLauncher.launch("application/pdf")
                             }
                             .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -510,11 +629,13 @@ fun CompleteYourBookingScreen(
                     ) {
                         Column {
                             Text(
-                                text = if (hasDriverLicense) "License_scan.pdf" else "Scan your driver license",
+                                text = if (hasDriverLicense && driverLicenseFileName.isNotEmpty()) 
+                                      driverLicenseFileName 
+                                      else "Select your driver license PDF",
                                 fontFamily = poppins,
                                 fontSize = 14.sp
                             )
-                            if (hasDriverLicense) {
+                            if (hasDriverLicense && driverLicenseFileName.isNotEmpty()) {
                                 Text(
                                     text = "Uploaded successfully",
                                     fontFamily = poppins,
@@ -523,7 +644,7 @@ fun CompleteYourBookingScreen(
                                 )
                             }
                         }
-
+                        
                         Box(
                             modifier = Modifier
                                 .size(40.dp)
@@ -532,39 +653,61 @@ fun CompleteYourBookingScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Upload",
+                                imageVector = if (hasDriverLicense) Icons.Default.Close else Icons.Default.Upload,
+                                contentDescription = if (hasDriverLicense) "Remove" else "Upload",
                                 tint = if (hasDriverLicense) Color.White else Color.Gray,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
                     }
                 }
-
+                
                 if (driverLicenseError != null) {
                     Text(
                         text = driverLicenseError ?: "",
                         color = Color.Red,
                         fontSize = 12.sp,
-                        modifier = Modifier.padding(start = 4.dp, top = 4.dp)
+                        modifier = Modifier
+                            .align(Alignment.Start)
+                            .padding(start = 4.dp, top = 4.dp)
                     )
                 }
-
+                
+                // Add spacer at the bottom for better scrolling
                 Spacer(modifier = Modifier.height(24.dp))
             }
-
-            // Bottom button fixed to the bottom
+        }
+        
+        // Fixed position button at the bottom
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter)
+                .background(Color.White)
+                .padding(horizontal = 24.dp, vertical = 16.dp)
+        ) {
             Button(
                 onClick = {
                     if (validateForm()) {
                         isSubmitting = true
-                        onContinueClick()
+                        
+                        // Update booking view model with renter information
+                        bookingViewModel.updateRenterInfo(
+                            first = firstName,
+                            last = lastName,
+                            phone = phoneNumber,
+                            emailAddress = email,
+                            selectedWilaya = selectedWilaya,
+                            licenseUri = driverLicenseUri,
+                            licenseFileName = driverLicenseFileName
+                        )
+                        
+                        onContinue()
                     }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp)
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .height(56.dp),
                 shape = RoundedCornerShape(28.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFF149459),
@@ -598,7 +741,7 @@ fun CompleteYourBookingScreen(
 @Composable
 fun CompleteYourBookingScreenPreview() {
     CompleteYourBookingScreen(
-        onBackClick = {},
-        onContinueClick = {}
+        onBackPressed = {},
+        onContinue = {}
     )
 } 

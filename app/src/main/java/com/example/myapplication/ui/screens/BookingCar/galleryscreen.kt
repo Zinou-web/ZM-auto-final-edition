@@ -1,5 +1,6 @@
-package com.example.myapplication.ui.screens.home
+package com.example.myapplication.ui.screens.BookingCar
 
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -7,9 +8,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,76 +30,132 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.myapplication.R
+import com.example.myapplication.data.model.Car
 import com.example.myapplication.ui.theme.poppins
+import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import androidx.compose.ui.platform.LocalContext
+import com.example.myapplication.ui.screens.home.CarUiState
+import com.example.myapplication.ui.screens.home.CarViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GalleryScreen(
+    carId: String?,
     onBackPressed: () -> Unit = {},
     onAboutClick: () -> Unit = {},
     onBookNowClick: () -> Unit = {},
-    photos: List<Int> = listOf(
-        R.drawable.ic_launcher_background,
-        R.drawable.ic_launcher_background,
-        R.drawable.ic_launcher_background,
-        R.drawable.ic_launcher_background
-    )
+    viewModel: CarViewModel = hiltViewModel()
 ) {
     var isFavorite by remember { mutableStateOf(false) }
+    val carDetailsState by viewModel.carDetailsState.collectAsState()
+    var car by remember { mutableStateOf<Car?>(null) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    LaunchedEffect(carId) {
+        carId?.toLongOrNull()?.let {
+            viewModel.loadCarById(it)
+        }
+    }
+
+    LaunchedEffect(carDetailsState) {
+        when (val state = carDetailsState) {
+            is CarUiState.SingleCarSuccess -> {
+                car = state.car
+                // Potentially update isFavorite based on car.isFavorited or similar
+            }
+            is CarUiState.Error -> {
+                Toast.makeText(context, state.message, Toast.LENGTH_SHORT).show()
+            }
+            else -> {}
+        }
+    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFF2F5FA))
     ) {
-        // Scrollable content
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(bottom = 120.dp) // Add padding at the bottom for the fixed price section
-                .verticalScroll(rememberScrollState())
-        ) {
-            // Top Car Image Section with Back Button and Favorite Button
-            TopImageSection(
-                isFavorite = false,
-                onFavoriteClick = {},
-                onBackPressed = onBackPressed,
-                title = "Car Details",
-                showFavorite = true
-            )
-
-            // Car Info Section (before tabs)
+        if (carDetailsState is CarUiState.Loading && car == null) {
+            // Show loading indicator only if car is not yet loaded
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = Color(0xFF149459))
+            }
+        } else if (car != null) {
+            // Scrollable content when car data is available
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFFF2F5FA))
-                    .padding(horizontal = 15.dp, vertical = 10.dp)
+                    .fillMaxSize()
+                    .padding(bottom = 120.dp) // Add padding at the bottom for the fixed price section
+                    .verticalScroll(rememberScrollState())
             ) {
-                // Top Row - Auto tag and Rating
-                GalleryCarTagAndRating()
+                // Top Car Image Section with Back Button and Favorite Button
+                TopImageSection(
+                    imageUrl = car!!.picture, // Pass the car's picture URL
+                    isFavorite = isFavorite, 
+                    onFavoriteClick = { isFavorite = !isFavorite },
+                    onBackPressed = onBackPressed,
+                    title = "${car!!.brand} ${car!!.model}", 
+                    showFavorite = true
+                )
 
-                // Car Name
-                GalleryCarNameSection()
+                // Car Info Section (before tabs)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFFF2F5FA))
+                        .padding(horizontal = 15.dp, vertical = 10.dp)
+                ) {
+                    // Top Row - Auto tag and Rating
+                    GalleryCarTagAndRating(
+                        transmission = car!!.transmission ?: "N/A",
+                        rating = car!!.rating?.toFloat() ?: 0f
+                    )
 
-                // Tab titles
-                GalleryTabTitles(onAboutClick)
+                    // Car Name
+                    GalleryCarNameSection(
+                        carName = car!!.brand ?: "",
+                        model = car!!.model ?: "",
+                        year = car!!.year?.toString() ?: ""
+                    )
+
+                    // Tab titles
+                    GalleryTabTitles(onAboutClick = onAboutClick) // onAboutClick navigates to CarDetails
+                }
+
+                // Tab indicator/divider (full width)
+                GalleryTabDivider()
+
+                GalleryContent(imageUrls = listOf(car!!.picture).filterNotNull())
             }
 
-            // Tab indicator/divider (full width)
-            GalleryTabDivider()
-
-            // Gallery Content
-            GalleryContent(photos = photos)
+            // Fixed Price and Book Now Section at the bottom
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter) // Ensures it's at the bottom of the Box
+                    // .padding(top = 720.dp) // This fixed padding might not be ideal, let's see
+                    .fillMaxWidth()
+            ) {
+                GalleryPriceAndBookSection(
+                    pricePerDay = car!!.rentalPricePerDay.toString(),
+                    onBookNowClick = onBookNowClick
+                )
+            }
+        } else if (carDetailsState is CarUiState.Error && car == null) {
+            // Optional: Show error if car is null and there was an error state
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Failed to load car details. Please try again.", color = Color.Red)
+            }
         }
-
-        // Fixed Price and Book Now Section at the bottom
-        Box(
-            modifier = Modifier
-                .padding(top = 720.dp)
-                .fillMaxWidth()
-        ) {
-            GalleryPriceAndBookSection(onBookNowClick = onBookNowClick)
-        }
+        // If car is null and not loading and not error, it might be an empty screen before carId is processed.
+        // Or after an error that didn't set carDetailsState to Error explicitly.
     }
 }
 
@@ -241,7 +295,10 @@ fun GalleryTopImageSection(
 }
 
 @Composable
-fun GalleryCarTagAndRating() {
+fun GalleryCarTagAndRating(
+    transmission: String,
+    rating: Float
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -269,7 +326,7 @@ fun GalleryCarTagAndRating() {
             Spacer(modifier = Modifier.width(4.dp))
 
             Text(
-                text = "4.9",
+                text = "$rating",
                 fontSize = 17.sp,
                 fontFamily = poppins,
                 fontWeight = FontWeight.Bold,
@@ -280,9 +337,13 @@ fun GalleryCarTagAndRating() {
 }
 
 @Composable
-fun GalleryCarNameSection() {
+fun GalleryCarNameSection(
+    carName: String,
+    model: String,
+    year: String
+) {
     Text(
-        text = "Ford Mustang GT Premium 2024",
+        text = "$carName $model $year",
         fontSize = 19.sp,
         fontFamily = poppins,
         fontWeight = FontWeight.SemiBold,
@@ -359,12 +420,7 @@ fun GalleryTabDivider() {
 
 @Composable
 fun GalleryContent(
-    photos: List<Int> = listOf(
-        R.drawable.ic_launcher_background,
-        R.drawable.ic_launcher_background,
-        R.drawable.ic_launcher_background,
-        R.drawable.ic_launcher_background
-    )
+    imageUrls: List<String>
 ) {
     Column(
         modifier = Modifier
@@ -387,6 +443,7 @@ fun GalleryContent(
                 color = Color.Black
             )
 
+            // "View all" can be made clickable later if needed
             Text(
                 text = "View all",
                 fontSize = 14.sp,
@@ -396,32 +453,41 @@ fun GalleryContent(
             )
         }
 
-        // Display all photos in a grid
-        val rows = photos.chunked(2)
+        if (imageUrls.isEmpty()) {
+            Text("No images available for this car.", modifier = Modifier.padding(16.dp))
+        } else {
+            // Display photos in a grid (2 columns)
+            val rows = imageUrls.chunked(2)
 
-        Column(
-            verticalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
-            rows.forEach { rowPhotos ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(25.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    rowPhotos.forEach { photo ->
-                        Image(
-                            painter = painterResource(id = photo),
-                            contentDescription = "Car Photo",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .size(170.dp,130.dp)
-
-                                .clip(RoundedCornerShape(15.dp))
-                        )
-
-                        // If there's only one photo in the row, add a spacer
+            Column(
+                verticalArrangement = Arrangement.spacedBy(20.dp) // Spacing between rows
+            ) {
+                rows.forEach { rowPhotos ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth(),
+                            // .padding(horizontal = 8.dp), // Padding for items within the row
+                        horizontalArrangement = Arrangement.spacedBy(25.dp), // Spacing between items in a row
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        rowPhotos.forEach { imageUrl ->
+                            AsyncImage(
+                                model = ImageRequest.Builder(LocalContext.current)
+                                    .data(imageUrl)
+                                    .crossfade(true)
+                                    .placeholder(R.drawable.car_placeholder) // Default placeholder
+                                    .error(R.drawable.car_placeholder) // Default error placeholder (ensure this exists)
+                                    .build(),
+                                contentDescription = "Car Photo",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .weight(1f) // Each image takes equal space in the row
+                                    .aspectRatio(1f) // Make images square, or adjust as needed
+                                    // .size(170.dp,130.dp) // Replaced by weight and aspectRatio
+                                    .clip(RoundedCornerShape(15.dp))
+                            )
+                        }
+                        // If there's only one photo in the last row, add a spacer to maintain alignment
                         if (rowPhotos.size == 1) {
                             Spacer(modifier = Modifier.weight(1f))
                         }
@@ -433,7 +499,10 @@ fun GalleryContent(
 }
 
 @Composable
-fun GalleryPriceAndBookSection(onBookNowClick: () -> Unit = {}) {
+fun GalleryPriceAndBookSection(
+    pricePerDay: String,
+    onBookNowClick: () -> Unit = {}
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -464,7 +533,7 @@ fun GalleryPriceAndBookSection(onBookNowClick: () -> Unit = {}) {
                 )
 
                 Text(
-                    text = "00.00DA/hr",
+                    text = "$pricePerDay/day",
                     fontSize = 21.sp,
                     fontFamily = poppins,
                     fontWeight = FontWeight.Normal,
@@ -501,15 +570,15 @@ fun GalleryPriceAndBookSection(onBookNowClick: () -> Unit = {}) {
 @Composable
 fun GalleryScreenPreview() {
     GalleryScreen(
-        photos = listOf(
-            R.drawable.ic_launcher_background,
-            R.drawable.ic_launcher_background,
-            R.drawable.ic_launcher_background,
-            R.drawable.ic_launcher_background,
-            R.drawable.ic_launcher_background,
-            R.drawable.ic_launcher_background,
-            R.drawable.ic_launcher_background,
-
-        )
+        carId = "1" // Example carId, or null
+        // photos = listOf( // This parameter no longer exists
+        //     R.drawable.ic_launcher_background,
+        //     R.drawable.ic_launcher_background,
+        //     R.drawable.ic_launcher_background,
+        //     R.drawable.ic_launcher_background,
+        //     R.drawable.ic_launcher_background,
+        //     R.drawable.ic_launcher_background,
+        //     R.drawable.ic_launcher_background,
+        // )
     )
 }

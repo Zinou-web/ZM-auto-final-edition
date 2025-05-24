@@ -1,4 +1,4 @@
-package com.example.myapplication.ui.screens.home.bookings
+package com.example.myapplication.ui.screens.bookings
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -16,7 +16,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -28,8 +27,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.myapplication.R
 import com.example.myapplication.data.model.Reservation
-import com.example.myapplication.ui.screens.home.ReservationUiState
-import com.example.myapplication.ui.screens.home.ReservationViewModel
+import com.example.myapplication.ui.screens.BookingCar.ReservationUiState
+import com.example.myapplication.ui.screens.BookingCar.ReservationViewModel
 import com.example.myapplication.ui.theme.poppins
 import androidx.hilt.navigation.compose.hiltViewModel
 import android.widget.Toast

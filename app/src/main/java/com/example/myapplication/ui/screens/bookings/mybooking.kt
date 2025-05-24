@@ -1,8 +1,7 @@
-package com.example.myapplication.ui.screens.home.bookings
+package com.example.myapplication.ui.screens.bookings
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -17,7 +16,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -34,10 +32,11 @@ import com.example.myapplication.navigation.Screen
 import com.example.myapplication.ui.theme.poppins
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.myapplication.data.model.Reservation
-import com.example.myapplication.ui.screens.home.ReservationUiState
-import com.example.myapplication.ui.screens.home.ReservationViewModel
+import com.example.myapplication.ui.screens.BookingCar.ReservationUiState
+import com.example.myapplication.ui.screens.BookingCar.ReservationViewModel
 import java.time.format.DateTimeFormatter
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 
 
 @OptIn(ExperimentalMaterial3Api::class)

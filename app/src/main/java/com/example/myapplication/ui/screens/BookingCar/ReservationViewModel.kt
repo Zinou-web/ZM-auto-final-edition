@@ -1,4 +1,4 @@
-package com.example.myapplication.ui.screens.home
+package com.example.myapplication.ui.screens.BookingCar
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -15,6 +15,18 @@ import java.time.LocalDate
 import javax.inject.Inject
 
 private const val TAG = "ReservationViewModel"
+
+// Interface for CarBookingScreen to interact with ReservationViewModel
+interface ReservationScreenActions {
+    val reservationState: StateFlow<ReservationUiState>
+    fun createReservation(
+        carId: Long,
+        startDate: LocalDate,
+        endDate: LocalDate,
+        totalPrice: Double
+    )
+    // Add other states/methods if CarBookingScreen uses them
+}
 
 /**
  * Sealed class representing different UI states for reservation data.
@@ -33,7 +45,7 @@ sealed class ReservationUiState {
 @HiltViewModel
 class ReservationViewModel @Inject constructor(
     private val reservationRepository: ReservationRepository
-) : ViewModel() {
+) : ViewModel(), ReservationScreenActions {
     
     // Reservation list UI state
     private val _uiState = MutableStateFlow<ReservationUiState>(ReservationUiState.Idle)
@@ -41,7 +53,7 @@ class ReservationViewModel @Inject constructor(
     
     // Single reservation UI state (for creation/update operations)
     private val _reservationState = MutableStateFlow<ReservationUiState>(ReservationUiState.Idle)
-    val reservationState: StateFlow<ReservationUiState> = _reservationState
+    override val reservationState: StateFlow<ReservationUiState> = _reservationState
     
     // Upcoming reservations
     private val _upcomingReservations = MutableStateFlow<List<Reservation>>(emptyList())
@@ -52,9 +64,8 @@ class ReservationViewModel @Inject constructor(
     val pastReservations: StateFlow<List<Reservation>> = _pastReservations
     
     init {
-        loadUserReservations()
-        loadUpcomingReservations()
-        loadPastReservations()
+        Log.d(TAG, "ReservationViewModel init block ENTERED (no fatal error).")
+        // (no network calls here)
     }
     
     /**
@@ -76,7 +87,9 @@ class ReservationViewModel @Inject constructor(
                             }
                         }
                         ApiStatus.ERROR -> {
-                            _uiState.value = ReservationUiState.Error(result.message ?: "Failed to load reservations")
+                            _uiState.value = ReservationUiState.Error(
+                                result.message ?: "Failed to load reservations"
+                            )
                             Log.e(TAG, "Error loading reservations: ${result.message}")
                         }
                         ApiStatus.LOADING -> {
@@ -156,7 +169,7 @@ class ReservationViewModel @Inject constructor(
     /**
      * Create a new reservation.
      */
-    fun createReservation(
+    override fun createReservation(
         carId: Long,
         startDate: LocalDate,
         endDate: LocalDate,
@@ -175,18 +188,22 @@ class ReservationViewModel @Inject constructor(
                     when (result.status) {
                         ApiStatus.SUCCESS -> {
                             result.data?.let { reservation ->
-                                _reservationState.value = ReservationUiState.SingleReservationSuccess(reservation)
+                                _reservationState.value =
+                                    ReservationUiState.SingleReservationSuccess(reservation)
                                 Log.d(TAG, "Created reservation with ID: ${reservation.id}")
                                 
                                 // Refresh reservation lists
                                 loadUpcomingReservations()
                                 loadUserReservations()
                             } ?: run {
-                                _reservationState.value = ReservationUiState.Error("Failed to create reservation")
+                                _reservationState.value =
+                                    ReservationUiState.Error("Failed to create reservation")
                             }
                         }
                         ApiStatus.ERROR -> {
-                            _reservationState.value = ReservationUiState.Error(result.message ?: "Failed to create reservation")
+                            _reservationState.value = ReservationUiState.Error(
+                                result.message ?: "Failed to create reservation"
+                            )
                             Log.e(TAG, "Error creating reservation: ${result.message}")
                         }
                         ApiStatus.LOADING -> {
@@ -222,11 +239,14 @@ class ReservationViewModel @Inject constructor(
                                 
                                 _reservationState.value = ReservationUiState.Idle
                             } else {
-                                _reservationState.value = ReservationUiState.Error("Failed to cancel reservation")
+                                _reservationState.value =
+                                    ReservationUiState.Error("Failed to cancel reservation")
                             }
                         }
                         ApiStatus.ERROR -> {
-                            _reservationState.value = ReservationUiState.Error(result.message ?: "Failed to cancel reservation")
+                            _reservationState.value = ReservationUiState.Error(
+                                result.message ?: "Failed to cancel reservation"
+                            )
                             Log.e(TAG, "Error cancelling reservation: ${result.message}")
                         }
                         ApiStatus.LOADING -> {
@@ -253,14 +273,18 @@ class ReservationViewModel @Inject constructor(
                     when (result.status) {
                         ApiStatus.SUCCESS -> {
                             result.data?.let { reservation ->
-                                _reservationState.value = ReservationUiState.SingleReservationSuccess(reservation)
+                                _reservationState.value =
+                                    ReservationUiState.SingleReservationSuccess(reservation)
                                 Log.d(TAG, "Loaded reservation with ID: ${reservation.id}")
                             } ?: run {
-                                _reservationState.value = ReservationUiState.Error("Reservation not found")
+                                _reservationState.value =
+                                    ReservationUiState.Error("Reservation not found")
                             }
                         }
                         ApiStatus.ERROR -> {
-                            _reservationState.value = ReservationUiState.Error(result.message ?: "Failed to load reservation")
+                            _reservationState.value = ReservationUiState.Error(
+                                result.message ?: "Failed to load reservation"
+                            )
                             Log.e(TAG, "Error loading reservation: ${result.message}")
                         }
                         ApiStatus.LOADING -> {

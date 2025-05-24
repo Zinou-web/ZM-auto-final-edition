@@ -55,8 +55,9 @@ open class RentalCarApp : Application(), Configuration.Provider {
     }
     
     private fun migratePreferencesToAuth() {
+        // TEMPORARILY DISABLED FOR TESTING AUTH FLOW
         // If user is logged in with old preference system, migrate to new auth system
-        if (preferenceManager.isLoggedIn && !authPreferenceManager.isLoggedIn()) {
+        if (false && preferenceManager.isLoggedIn && !authPreferenceManager.isLoggedIn()) {
             preferenceManager.authToken?.let { token ->
                 authPreferenceManager.saveAuthToken(token)
                 preferenceManager.userId?.let { userId ->
@@ -69,6 +70,10 @@ open class RentalCarApp : Application(), Configuration.Provider {
                 Timber.d("Migrated user authentication from old preferences to secure storage")
             }
         }
+
+        // ADDED: Clear any existing login for testing
+        authPreferenceManager.clearAuthData()
+        Timber.d("Auth data cleared for testing purposes")
     }
     
     private fun enableStrictMode() {

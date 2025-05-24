@@ -170,7 +170,7 @@ class CarViewModel @Inject constructor(
                     ApiStatus.SUCCESS -> {
                         val car = result.data
                         if (car != null) {
-                            CarUiState.Success(listOf(car))
+                            CarUiState.SingleCarSuccess(car)
                         } else {
                             CarUiState.Error("Car not found")
                         }

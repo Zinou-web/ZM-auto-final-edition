@@ -16,9 +16,9 @@ class RetrofitClient @Inject constructor(
         .setLenient()
         .create()
 
-    private val retrofit: Retrofit by lazy {
+    private val retrofit by lazy {
         Retrofit.Builder()
-            .baseUrl(BASE_URL)
+            .baseUrl(BuildConfig.API_BASE_URL)
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
@@ -33,9 +33,6 @@ class RetrofitClient @Inject constructor(
     }
 
     companion object {
-        // Use the base URL from BuildConfig
-        val BASE_URL = BuildConfig.API_BASE_URL
-            
         // For direct usage in places where DI is not available
         @Volatile
         private var INSTANCE: RetrofitClient? = null
