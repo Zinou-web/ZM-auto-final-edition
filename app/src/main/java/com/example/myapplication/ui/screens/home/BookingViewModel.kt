@@ -11,6 +11,9 @@ import androidx.lifecycle.ViewModel
  */
 class BookingViewModel : ViewModel() {
     
+    // Booking ID
+    var reservationId by mutableStateOf<Long>(0L)
+    
     // Car booking details
     var carName by mutableStateOf("")
     var carYear by mutableStateOf("")
@@ -70,6 +73,11 @@ class BookingViewModel : ViewModel() {
         // Calculate costs
         driverFees = if (driverOption == "With Driver") 1000.0 * totalDays else 0.0
         totalPrice = (carPrice * totalDays) + driverFees
+        
+        // Generate a temporary reservation ID (in a real app this would come from the backend)
+        if (reservationId == 0L) {
+            reservationId = System.currentTimeMillis()
+        }
     }
     
     // Update renter information
@@ -90,4 +98,12 @@ class BookingViewModel : ViewModel() {
         driverLicenseUri = licenseUri
         driverLicenseFileName = licenseFileName
     }
+    
+    // Update reservation ID when it's created
+    fun updateReservationId(id: Long) {
+        reservationId = id
+    }
+    
+    // Car ID for reservation creation
+    var carId by mutableStateOf(0L)
 } 

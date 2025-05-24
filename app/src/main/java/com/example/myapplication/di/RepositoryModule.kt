@@ -4,50 +4,44 @@ import com.example.myapplication.data.api.ApiService
 import com.example.myapplication.data.preference.AuthPreferenceManager
 import com.example.myapplication.data.repository.*
 import com.example.myapplication.utils.PreferenceManager
+import dagger.Binds
 import dagger.Module
-import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-object RepositoryModule {
+abstract class RepositoryModule {
     
     // For backward compatibility, we keep the old repository implementation
-    @Provides
     @Singleton
-    fun provideUserRepository(
-        apiService: ApiService,
-        preferenceManager: PreferenceManager
-    ): UserRepository {
-        return UserRepositoryImpl(apiService, preferenceManager)
-    }
+    @Binds
+    abstract fun provideUserRepository(
+        userRepositoryImpl: UserRepositoryImpl
+    ): UserRepository
     
-    @Provides
     @Singleton
-    fun provideAuthRepository(
-        apiService: ApiService,
-        authPreferenceManager: AuthPreferenceManager
-    ): AuthRepository {
-        return AuthRepositoryImpl(apiService, authPreferenceManager)
-    }
+    @Binds
+    abstract fun provideAuthRepository(
+        authRepositoryImpl: AuthRepositoryImpl
+    ): AuthRepository
     
-    @Provides
     @Singleton
-    fun provideCarRepository(
-        apiService: ApiService,
-        authPreferenceManager: AuthPreferenceManager
-    ): CarRepository {
-        return CarRepositoryImpl(apiService, authPreferenceManager)
-    }
+    @Binds
+    abstract fun provideCarRepository(
+        carRepositoryImpl: CarRepositoryImpl
+    ): CarRepository
     
-    @Provides
     @Singleton
-    fun provideReservationRepository(
-        apiService: ApiService,
-        authPreferenceManager: AuthPreferenceManager
-    ): ReservationRepository {
-        return ReservationRepositoryImpl(apiService, authPreferenceManager)
-    }
+    @Binds
+    abstract fun provideReservationRepository(
+        reservationRepositoryImpl: ReservationRepositoryImpl
+    ): ReservationRepository
+    
+    @Singleton
+    @Binds
+    abstract fun provideFavoriteRepository(
+        favoriteRepositoryImpl: FavoriteRepositoryImpl
+    ): FavoriteRepository
 }

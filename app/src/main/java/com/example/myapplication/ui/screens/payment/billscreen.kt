@@ -1,5 +1,6 @@
 package com.example.myapplication.ui.screens.payment
 
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -9,35 +10,88 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.lifecycleScope
 import com.example.myapplication.R
+import com.example.myapplication.ui.screens.BookingCar.ReservationUiState
+import com.example.myapplication.ui.screens.BookingCar.ReservationViewModel
 import com.example.myapplication.ui.screens.home.BookingViewModel
 import com.example.myapplication.ui.theme.poppins
 import java.text.NumberFormat
 import java.util.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.ZoneId
+import java.text.SimpleDateFormat
 
 @Composable
 fun BillScreen(
-    onBackClick: () -> Unit,
-    onContinueClick: () -> Unit,
-    viewModel: BookingViewModel = viewModel()
+    onBackClick: () -> Unit = {},
+    onContinueClick: () -> Unit = {},
+    viewModel: BookingViewModel = viewModel(),
+    paymentViewModel: PaymentViewModel = hiltViewModel(),
+    reservationViewModel: ReservationViewModel = hiltViewModel()
 ) {
     // Calculate top padding based on status bar height
     val topPadding = with(LocalDensity.current) {
         WindowInsets.statusBars.getTop(this).toDp()
+    }
+    
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    
+    // Payment flow states
+    val paymentUiState by paymentViewModel.uiState.collectAsState()
+    var isLoading by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    
+    // Transaction details for display
+    val transactionId by paymentViewModel.transactionId.collectAsState()
+    
+    // Handle payment UI state changes
+    LaunchedEffect(paymentUiState) {
+        when (paymentUiState) {
+            is PaymentUiState.Loading -> {
+                isLoading = true
+                errorMessage = null
+            }
+            is PaymentUiState.Success -> {
+                isLoading = false
+                errorMessage = null
+                // Navigate to next screen on success
+                onContinueClick()
+            }
+            is PaymentUiState.Error -> {
+                isLoading = false
+                errorMessage = (paymentUiState as PaymentUiState.Error).message
+            }
+            is PaymentUiState.ValidationError -> {
+                isLoading = false
+                errorMessage = "Please check your payment details and try again."
+            }
+            is PaymentUiState.Initial -> {
+                isLoading = false
+                errorMessage = null
+            }
+        }
     }
     
     // Currency formatter
@@ -102,6 +156,22 @@ fun BillScreen(
             }
 
             Spacer(modifier = Modifier.height(18.dp))
+
+            // Display error message if any
+            if (errorMessage != null) {
+                Text(
+                    text = errorMessage ?: "",
+                    color = Color.Red,
+                    fontSize = 14.sp,
+                    fontFamily = poppins,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+            }
 
             // Rest of the content in a scrollable column
             Column(
@@ -199,246 +269,250 @@ fun BillScreen(
                     modifier = Modifier.padding(vertical = 35.dp)
                 )
 
-                BillDetailItem("Total Days", viewModel.totalDays.toString(), textColor = Color(0xFF323232))
-                if (viewModel.driverOption == "With Driver") {
-                    BillDetailItem("Driver Fees", driverFees, textColor = Color(0xFF323232))
-                }
+                PriceDetailItem("Car price", carPricePerDay)
+                PriceDetailItem("Driver fees", driverFees)
 
                 Divider(
                     color = Color.Black.copy(alpha = 0.4f),
                     thickness = 1.dp,
-                    modifier = Modifier.padding(vertical = 22.dp)
+                    modifier = Modifier.padding(vertical = 35.dp)
                 )
 
-                BillDetailItem("Total", totalPrice, textColor = Color(0xFF323232))
+                PriceDetailItem("Total", totalPrice, true)
 
-                Divider(
-                    color = Color.Black.copy(alpha = 0.4f),
-                    thickness = 1.dp,
-                    modifier = Modifier.padding(vertical = 13.dp)
-                )
-
-                // Personal Information
+                // Transaction ID display if available
+                if (!transactionId.isNullOrEmpty()) {
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color.White
-                    )
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFECF8F2))
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp)
-                    ) {
-                        Text(
-                            text = "Personal Information",
-                            fontSize = 18.sp,
-                            fontFamily = poppins,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.Black,
-                            modifier = Modifier.padding(bottom = 12.dp)
-                        )
-                        
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = "Name:",
-                                fontSize = 14.sp,
-                                fontFamily = poppins,
-                                color = Color.Gray
+                                text = "Transaction Details",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF149459)
                             )
-                            
-                            Text(
-                                text = "${viewModel.firstName} ${viewModel.lastName}",
-                                fontSize = 14.sp,
-                                fontFamily = poppins,
-                                fontWeight = FontWeight.Medium,
-                                color = Color.Black
-                            )
-                        }
                         
                         Spacer(modifier = Modifier.height(8.dp))
                         
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
                             Text(
-                                text = "Phone:",
+                                text = "Transaction ID: ${transactionId ?: ""}",
                                 fontSize = 14.sp,
-                                fontFamily = poppins,
-                                color = Color.Gray
+                                color = Color.Black.copy(alpha = 0.7f)
                             )
                             
                             Text(
-                                text = "+213 ${viewModel.phoneNumber}",
+                                text = "Date: ${Date().toString()}",
                                 fontSize = 14.sp,
-                                fontFamily = poppins,
-                                fontWeight = FontWeight.Medium,
-                                color = Color.Black
-                            )
-                        }
-                        
-                        Spacer(modifier = Modifier.height(8.dp))
-                        
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = "Email:",
-                                fontSize = 14.sp,
-                                fontFamily = poppins,
-                                color = Color.Gray
+                                color = Color.Black.copy(alpha = 0.7f)
                             )
                             
                             Text(
-                                text = viewModel.email,
+                                text = "Status: Pending Confirmation",
                                 fontSize = 14.sp,
-                                fontFamily = poppins,
-                                fontWeight = FontWeight.Medium,
-                                color = Color.Black
-                            )
-                        }
-                        
-                        Spacer(modifier = Modifier.height(8.dp))
-                        
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = "Wilaya:",
-                                fontSize = 14.sp,
-                                fontFamily = poppins,
-                                color = Color.Gray
-                            )
-                            
-                            Text(
-                                text = viewModel.wilaya,
-                                fontSize = 14.sp,
-                                fontFamily = poppins,
-                                fontWeight = FontWeight.Medium,
-                                color = Color.Black
-                            )
-                        }
-                        
-                        Spacer(modifier = Modifier.height(8.dp))
-                        
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = "License:",
-                                fontSize = 14.sp,
-                                fontFamily = poppins,
-                                color = Color.Gray
-                            )
-                            
-                            Text(
-                                text = viewModel.driverLicenseFileName,
-                                fontSize = 14.sp,
-                                fontFamily = poppins,
-                                fontWeight = FontWeight.Medium,
-                                color = Color.Black
+                                color = Color(0xFFFF9800)
                             )
                         }
                     }
-                }
+                        }
+                        
+                Spacer(modifier = Modifier.height(100.dp)) // Extra space for button
+            }
+        }
 
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-            
-            // Confirm Payment button
+        // Confirm button at the bottom
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .background(Color.White)
+                .padding(16.dp)
+        ) {
             Button(
-                onClick = onContinueClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                onClick = {
+                    // Handle both confirmation and payment initiation
+                    if (transactionId.isNullOrEmpty()) {
+                        // If we don't have a transaction ID yet, this is a new payment
+                        
+                        // Show loading indicator
+                        isLoading = true
+                        
+                        // Create a new reservation first if needed
+                        if (viewModel.reservationId <= 0) {
+                            // Log current state
+                            Log.d("BillScreen", "Creating new reservation for car: ${viewModel.carName}")
+                            
+                            // Parse dates
+                            val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.US)
+                            val startDate = try {
+                                val date = dateFormat.parse(viewModel.pickUpDate)
+                                date?.toInstant()?.atZone(ZoneId.systemDefault())?.toLocalDate()
+                                    ?: LocalDate.now()
+                            } catch (e: Exception) {
+                                Log.e("BillScreen", "Error parsing start date: ${e.message}")
+                                LocalDate.now()
+                            }
+                            
+                            val endDate = try {
+                                val date = dateFormat.parse(viewModel.dropOffDate)
+                                date?.toInstant()?.atZone(ZoneId.systemDefault())?.toLocalDate()
+                                    ?: LocalDate.now().plusDays(3)
+                            } catch (e: Exception) {
+                                Log.e("BillScreen", "Error parsing end date: ${e.message}")
+                                LocalDate.now().plusDays(3)
+                            }
+                            
+                            // Default car ID if not specified (for testing)
+                            val carId = viewModel.carId.takeIf { it > 0 } ?: 1L
+                            
+                            // Create the reservation using the ViewModel
+                            lifecycleOwner.lifecycleScope.launch {
+                                try {
+                                    // Create reservation first
+                                    reservationViewModel.createReservation(
+                                        carId = carId,
+                                        startDate = startDate,
+                                        endDate = endDate,
+                                        totalPrice = viewModel.totalPrice
+                                    )
+                                    
+                                    // Wait for reservation to be created
+                                    delay(1000)
+                                    
+                                    // Check if we got a reservation ID from the SingleReservationSuccess state
+                                    val state = reservationViewModel.reservationState.value
+                                    if (state is ReservationUiState.SingleReservationSuccess) {
+                                        // Use the newly created reservation ID
+                                        val newReservationId = state.reservation.id
+                                        viewModel.updateReservationId(newReservationId)
+                                        
+                                        // Log the reservation ID
+                                        Log.d("BillScreen", "Created reservation with ID: $newReservationId")
+                                        
+                                        // Process payment with the new reservation ID
+                                        paymentViewModel.processPayment(
+                                            reservationId = newReservationId,
+                                            paymentMethod = "billscreen_confirm", 
+                                            amount = viewModel.totalPrice
+                                        )
+                                    } else {
+                                        // Handle reservation creation failure
+                                        Log.e("BillScreen", "Failed to create reservation: $state")
+                                        isLoading = false
+                                        errorMessage = "Could not create reservation. Please try again."
+                                    }
+                                } catch (e: Exception) {
+                                    // Handle any exceptions
+                                    Log.e("BillScreen", "Error during reservation creation: ${e.message}", e)
+                                    isLoading = false
+                                    errorMessage = "An error occurred. Please try again."
+                        }
+                    }
+                        } else {
+                            // We already have a reservation ID, just process payment
+                            Log.d("BillScreen", "Using existing reservation ID: ${viewModel.reservationId}")
+
+                            // Process payment with existing reservation ID
+                            paymentViewModel.processPayment(
+                                reservationId = viewModel.reservationId,
+                                paymentMethod = "billscreen_confirm", 
+                                amount = viewModel.totalPrice
+                            )
+                        }
+                    } else {
+                        // If we already have a transaction ID, just continue to the next screen
+                        onContinueClick()
+                    }
+                },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                    .height(52.dp),
                 shape = RoundedCornerShape(20.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF149459)
-                )
-            ) {
-                Text(
-                    text = "Confirm Payment",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White
-                )
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF149459)
+                ),
+                enabled = !isLoading
+                ) {
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = Color.White,
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text(
+                        text = "Confirm Payment",
+                        fontFamily = poppins,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
             }
-            
-            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }
 
 @Composable
-fun BillDetailItem(
-    label: String,
-    value: String,
-    withDivider: Boolean = false,
-    textColor: Color = Color.Black
-) {
-    Row(
+fun BillDetailItem(title: String, value: String) {
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
+            .padding(vertical = 8.dp)
     ) {
         Text(
-            text = label,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Normal,
-            color = textColor
+            text = title,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium,
+            color = Color.Black.copy(alpha = 0.6f)
         )
-
+        
+        Spacer(modifier = Modifier.height(4.dp))
+        
         Text(
             text = value,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Medium,
-            color = textColor
+            fontSize = 16.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color.Black
         )
+    }
+}
+
+@Composable
+fun PriceDetailItem(title: String, value: String, isTotal: Boolean = false) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+            text = title,
+            fontSize = if (isTotal) 18.sp else 16.sp,
+            fontWeight = if (isTotal) FontWeight.Bold else FontWeight.Medium,
+            color = if (isTotal) Color.Black else Color.Black.copy(alpha = 0.7f)
+            )
+
+            Text(
+                text = value,
+            fontSize = if (isTotal) 20.sp else 16.sp,
+            fontWeight = if (isTotal) FontWeight.Bold else FontWeight.SemiBold,
+            color = if (isTotal) Color(0xFF149459) else Color.Black
+            )
     }
 }
 
 @Preview(showBackground = true)
 @Composable
 fun BillScreenPreview() {
-    // Create a sample BookingViewModel for preview
-    val viewModel = BookingViewModel().apply {
-        carName = "Toyota Corolla"
-        carYear = "2023"
-        carPrice = 5000.0
-        carTransmission = "Auto"
-        carRating = 4.5f
-        
-        pickUpDate = "May 20, 2023"
-        pickUpTime = "10:00 AM"
-        dropOffDate = "May 23, 2023"
-        dropOffTime = "12:00 PM"
-        
-        driverOption = "Self-Driver"
-        totalDays = 3
-        driverFees = 0.0
-        totalPrice = 15000.0
-        
-        firstName = "Ahmed"
-        lastName = "Mohammad"
-        phoneNumber = "1234567890"
-        email = "ahmed@example.com"
-        wilaya = "Algiers"
-        driverLicenseFileName = "license_scan.pdf"
-    }
-    
     BillScreen(
         onBackClick = {},
-        onContinueClick = {},
-        viewModel = viewModel
+        onContinueClick = {}
     )
 }

@@ -1,6 +1,5 @@
 package com.example.myapplication.ui.screens.home
 
-
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -8,6 +7,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,6 +25,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -44,7 +47,7 @@ import kotlin.math.roundToInt
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.material.icons.filled.SearchOff
-
+import com.example.myapplication.ui.screens.home.FavoriteViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -85,273 +88,145 @@ fun HomeScreen(
     val maxPrice = 5000
     val currentFilterPrice = (minPrice + (maxPrice - minPrice) * filterPriceValue).roundToInt()
     
-    // Update UI when filters change
-    LaunchedEffect(filters) {
-        Log.d("HomeScreen", "FILTER DEBUG: Filters changed: $filters")
-        
-        // Update the selected brand in the UI if filter is for a brand
-        filters?.let { currentFilters ->
-            if (currentFilters.brand != null && currentFilters.brand != selectedBrand) {
-                Log.d("HomeScreen", "FILTER DEBUG: Updating selected brand to ${currentFilters.brand}")
-                selectedBrand = currentFilters.brand
-            }
-        }
-        
-        // Log filter details
-        filters?.let { currentFilters ->
-            Log.d("HomeScreen", "FILTER DEBUG: Current filters:")
-            Log.d("HomeScreen", "FILTER DEBUG: Type: ${currentFilters.type ?: "None"}")
-            Log.d("HomeScreen", "FILTER DEBUG: Brand: ${currentFilters.brand ?: "None"}")
-            Log.d("HomeScreen", "FILTER DEBUG: Min Rating: ${currentFilters.minRating}")
-            Log.d("HomeScreen", "FILTER DEBUG: Max Price: ${currentFilters.maxPrice}")
-        }
-    }
-    
-    // Mock cars list for comparison (to check if filtering is applied)
-    val mockCars = remember {
-        listOf(
-            com.example.myapplication.data.model.Car(
-                id = 1,
-                brand = "Toyota",
-                model = "Corolla",
-                year = 2022,
-                rentalPricePerDay = java.math.BigDecimal(55.0),
-                transmission = "Automatic",
-                rating = 4,
-                colour = "White",
-                fuel = "Petrol",
-                type = "Sedan"
-            ),
-            com.example.myapplication.data.model.Car(
-                id = 2,
-                brand = "BMW",
-                model = "X5",
-                year = 2023,
-                rentalPricePerDay = java.math.BigDecimal(120.0),
-                transmission = "Automatic",
-                rating = 5,
-                colour = "Black",
-                fuel = "Diesel",
-                type = "SUV"
-            ),
-            com.example.myapplication.data.model.Car(
-                id = 3,
-                brand = "Mercedes",
-                model = "S-Class",
-                year = 2023,
-                rentalPricePerDay = java.math.BigDecimal(150.0),
-                transmission = "Automatic",
-                rating = 5,
-                colour = "Silver",
-                fuel = "Petrol",
-                type = "Luxury"
-            ),
-            com.example.myapplication.data.model.Car(
-                id = 4,
-                brand = "Toyota",
-                model = "Yaris",
-                year = 2021,
-                rentalPricePerDay = java.math.BigDecimal(45.0),
-                transmission = "Manual",
-                rating = 3,
-                colour = "Red",
-                fuel = "Petrol",
-                type = "Compact"
-            ),
-            com.example.myapplication.data.model.Car(
-                id = 5,
-                brand = "Tesla",
-                model = "Model 3",
-                year = 2023,
-                rentalPricePerDay = java.math.BigDecimal(130.0),
-                transmission = "Automatic",
-                rating = 5,
-                colour = "White",
-                fuel = "Electric",
-                type = "Electric"
-            )
-        )
-    }
-    
-    val context = androidx.compose.ui.platform.LocalContext.current
-    
-    // Use LaunchedEffect to show Toast in a Composable context
-    LaunchedEffect(carUiState) {
-        when (carUiState) {
-            is CarUiState.Error -> {
-                android.widget.Toast.makeText(
-                    context,
-                    (carUiState as CarUiState.Error).message,
-                    android.widget.Toast.LENGTH_SHORT
-                ).show()
-            }
-            else -> {}
-        }
-    }
-    
-    // Handle changes to UI state
-    LaunchedEffect(carUiState) {
-        when (carUiState) {
-            is CarUiState.Success -> {
-                Log.d("HomeScreen", "FILTER DEBUG: Received Success UI state with ${(carUiState as CarUiState.Success).cars.size} cars")
-                cars = (carUiState as CarUiState.Success).cars
-                
-                // Log all received cars for debugging
-                cars.forEach { car ->
-                    Log.d("HomeScreen", "FILTER DEBUG: Received car: ${car.id} - ${car.brand} ${car.model} (${car.type})")
-                }
-            }
-            is CarUiState.PaginatedSuccess -> {
-                val pagedResponse = (carUiState as CarUiState.PaginatedSuccess).pagedResponse
-                Log.d("HomeScreen", "FILTER DEBUG: Received PaginatedSuccess UI state with ${pagedResponse.content.size} cars")
-                cars = pagedResponse.content
-            }
-            is CarUiState.Loading -> {
-                Log.d("HomeScreen", "FILTER DEBUG: Loading cars...")
-            }
-            is CarUiState.Error -> {
-                Log.e("HomeScreen", "FILTER DEBUG: Error: ${(carUiState as CarUiState.Error).message}")
-            }
-            else -> {}
-        }
-    }
-    
     // Track if filters are applied
     val isFiltered = remember(filters) {
-        val currentFilters = filters
-        currentFilters != null && (
-            currentFilters.type != null || 
-            currentFilters.brand != null || 
-            currentFilters.minRating > 0 || 
-            (currentFilters.maxPrice != null && currentFilters.maxPrice < 5000)
-        )
+        filters?.type != null || 
+        filters?.brand != null || 
+        (filters?.minRating ?: 0f) > 0 || 
+        (filters?.maxPrice != null && (filters?.maxPrice ?: 5000) < 5000)
     }
     
     // Reset filters function
     val resetFilters = {
-        Log.d("HomeScreen", "FILTER DEBUG: Resetting filters")
-        viewModel.loadAllCars() // This will also reset _currentFilters to null
+        viewModel.applyFilters(null) // Pass null to reset filters
         selectedBrand = "All"
         searchQuery = ""
     }
     
-    // Handle brand selection
-    LaunchedEffect(selectedBrand) {
-        if (selectedBrand == "All") {
-            // If "All" is selected, clear brand filter but keep other filters
-            filters?.let { currentFilters ->
-                viewModel.applyFilters(currentFilters.copy(brand = null))
-            } ?: run {
-                viewModel.loadAllCars()
+    // Update UI when filters change
+    LaunchedEffect(filters) {
+        // We already have the filters observed from the viewModel, no need to update them again
+    }
+    
+    // Process UI state changes
+    LaunchedEffect(carUiState) {
+        when (carUiState) {
+            is CarUiState.Success -> {
+                cars = (carUiState as CarUiState.Success).cars
             }
-        } else {
-            // Apply brand filter, preserving other filters
-            filters?.let { currentFilters ->
-                viewModel.applyFilters(currentFilters.copy(brand = selectedBrand))
-            } ?: run {
-                viewModel.applyFilters(FilterParams(brand = selectedBrand))
+            is CarUiState.Error -> {
+                // Could handle error with a SnackBar or dialog
+                Log.e("HomeScreen", "Error: ${(carUiState as CarUiState.Error).message}")
             }
+            else -> { /* Loading state handled in the UI */ }
         }
     }
     
-    // Search handling
-    var debouncedSearchQuery by remember { mutableStateOf("") }
-    LaunchedEffect(searchQuery) {
-        // Shorter debounce delay for better responsiveness
-        kotlinx.coroutines.delay(300) // Debounce delay
-        debouncedSearchQuery = searchQuery
-        
-        // Add debug output
-        Log.d("HomeScreen", "Search query: '$searchQuery'")
-    }
-    
-    LaunchedEffect(debouncedSearchQuery) {
-        if (debouncedSearchQuery.isNotBlank()) {
-            // Apply search filter using the view model
-            Log.d("HomeScreen", "Filtering by search query: '$debouncedSearchQuery'")
-            
-            // Create a more comprehensive search filter that checks both brand and model/type
-            // Don't specify a specific field to search, let the ViewModel handle the search logic
-            viewModel.searchCars(debouncedSearchQuery)
-            
-            // Update the selected brand to "All" since we're searching
-            if (selectedBrand != "All") {
-                selectedBrand = "All"
-            }
-        } else if (selectedBrand == "All") {
-            // If search is empty and no brand filter, load all cars
-            Log.d("HomeScreen", "Loading all cars (no search, no brand filter)")
-            viewModel.loadAllCars()
-        } else {
-            // If search is empty but brand is selected, apply brand filter
-            Log.d("HomeScreen", "Filtering by brand: '$selectedBrand'")
-            viewModel.applyFilters(FilterParams(brand = selectedBrand))
-        }
+    // Initial load of cars
+    LaunchedEffect(Unit) {
+        viewModel.applyFilters(null) // Initialize with null filters to load all cars
     }
 
-    // Initial load - only load all cars if there are no filters
-    LaunchedEffect(Unit) {
-        Log.d("HomeScreen", "FILTER DEBUG: Initial load, filters: $filters")
-        if (filters == null) {
-            Log.d("HomeScreen", "FILTER DEBUG: No filters, loading all cars")
-            viewModel.loadAllCars()
-        } else {
-            Log.d("HomeScreen", "FILTER DEBUG: Filters exist, keeping them")
-            // Filters already exist, don't reload
-        }
+    // Calculate top padding based on status bar height
+    val topPadding = with(LocalDensity.current) {
+        WindowInsets.statusBars.getTop(this).toDp()
     }
+
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFF2F5FA))
     ) {
+        // Main content
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = 8.dp, bottom = 80.dp)
-                .verticalScroll(scrollState)
+                .padding(top = topPadding)
+                .verticalScroll(scrollState),
         ) {
-            // Top Bar with Profile and Notification Icons
+            // Top bar with profile icon and notification
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 4.dp),
+                    .padding(top = 30.dp, start = 20.dp, end = 20.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Profile Icon - now clickable to navigate to profile
+                // Profile icon
                 Box(
                     modifier = Modifier
-                        .clip(shape = RoundedCornerShape(12.dp))
-                        .size(40.dp)
-                        .background(Color.White)
-                        .padding(8.dp)
-                        .clickable { onProfileClick() }
+                        .size(45.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFFFFFFF))
+                        .clickable(onClick = onProfileClick)
                 ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.profile),
+                    Image(
+                        painter = painterResource(id = R.drawable.profilenav),
                         contentDescription = "Profile",
-                        tint = Color.Black,
-                        modifier = Modifier.size(25.dp)
+                        modifier = Modifier
+                            .size(45.dp)
+                            .padding(10.dp)
                     )
                 }
-
-                // Notification Icon
-                Box(
-                    modifier = Modifier
-                        .clip(shape = RoundedCornerShape(12.dp))
-                        .size(40.dp)
-                        .background(Color.White)
-                        .padding(8.dp)
-                        .clickable { onNotificationClick() }
+                
+                // App name in center
+                Text(
+                    text = "ZM Auto",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = poppins,
+                    color = Color(0xFF149459),
+                    modifier = Modifier.padding(start = 8.dp)
+                )
+                
+                // Icons on the right
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.notification),
-                        contentDescription = "Notifications",
-                        tint = Color.Black,
-                        modifier = Modifier.size(25.dp)
-                    )
+                    // Favorites icon
+                    Box(
+                        modifier = Modifier
+                            .size(45.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFFFFFFF))
+                            .clickable(onClick = onFavoriteClick)
+                            .padding(10.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Favorite,
+                            contentDescription = "Favorites",
+                            tint = Color(0xFF149459),
+                            modifier = Modifier.size(25.dp)
+                        )
+                    }
+                    
+                    // Notification icon
+                    Box(
+                        modifier = Modifier
+                            .size(45.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFFFFFFF))
+                            .clickable(onClick = onNotificationClick)
+                    ) {
+                        Badge(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .offset((-2).dp, 2.dp)
+                        ) {
+                            Text(text = "2")
+                        }
+                        
+                        Icon(
+                            painter = painterResource(id = R.drawable.notification_icon),
+                            contentDescription = "Notifications",
+                            modifier = Modifier
+                                .padding(10.dp)
+                                .size(25.dp),
+                            tint = Color(0xFF149459)
+                        )
+                    }
                 }
             }
 
@@ -539,7 +414,8 @@ fun HomeScreen(
                         items(popularCars) { car ->
                             PopularCarItem(
                                 car = car,
-                                onClick = { onCarClick(car.id.toString()) }
+                                onClick = { onCarClick(car.id.toString()) },
+                                favoriteViewModel = hiltViewModel()
                             )
                         }
                     }
@@ -1271,10 +1147,17 @@ fun CarBrandItem(
 @Composable
 fun CarItem(
     car: com.example.myapplication.data.model.Car,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    favoriteViewModel: FavoriteViewModel = hiltViewModel()
 ) {
-    // State to track if this car is favorited
-    var isFavorite by remember { mutableStateOf(false) }
+    // Get favorite status from ViewModel
+    val favoriteStatusMap by favoriteViewModel.favoriteStatusMap.collectAsState()
+    val isFavorite = favoriteStatusMap[car.id] ?: false
+    
+    // Check favorite status for this car when first displayed
+    LaunchedEffect(car.id) {
+        favoriteViewModel.checkFavoriteStatus(car.id)
+    }
 
     Column(
         modifier = Modifier
@@ -1305,8 +1188,7 @@ fun CarItem(
                     Box(
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        // If car image URL is available, load it using Coil
-                        // For now, we'll use a placeholder
+                        // Car Image
                         Image(
                             painter = painterResource(id = R.drawable.car_placeholder),
                             contentDescription = "${car.brand} ${car.model}",
@@ -1348,7 +1230,7 @@ fun CarItem(
                             }
                         }
 
-                        // Heart Icon - Now clickable
+                        // Heart Icon - Now integrated with FavoriteViewModel
                         Box(
                             modifier = Modifier
                                 .padding(end = 12.dp, top = 12.dp)
@@ -1356,7 +1238,7 @@ fun CarItem(
                                 .size(36.dp)
                                 .clip(CircleShape)
                                 .background(Color.White)
-                                .clickable { isFavorite = !isFavorite }
+                                .clickable { favoriteViewModel.toggleFavorite(car.id) }
                                 .padding(8.dp)
                         ) {
                             Icon(
@@ -1654,8 +1536,18 @@ fun FilterChip(
 @Composable
 fun PopularCarItem(
     car: com.example.myapplication.data.model.Car,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    favoriteViewModel: FavoriteViewModel = hiltViewModel()
 ) {
+    // Get favorite status from ViewModel
+    val favoriteStatusMap by favoriteViewModel.favoriteStatusMap.collectAsState()
+    val isFavorite = favoriteStatusMap[car.id] ?: false
+    
+    // Check favorite status for this car when first displayed
+    LaunchedEffect(car.id) {
+        favoriteViewModel.checkFavoriteStatus(car.id)
+    }
+    
     Card(
         modifier = Modifier
             .width(260.dp)
@@ -1702,31 +1594,19 @@ fun PopularCarItem(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.BottomCenter)
-                    .background(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                Color(0x99000000)
-                            ),
-                            startY = 0f,
-                            endY = 60f
-                        )
-                    )
-                    .padding(12.dp)
+                    .padding(horizontal = 12.dp, vertical = 12.dp)
             ) {
-                // Car Name
+                // Car name
                 Text(
                     text = "${car.brand} ${car.model}",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    color = Color.White
                 )
                 
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 
-                // Price and Rating
+                // Price and rating
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -1779,6 +1659,25 @@ fun PopularCarItem(
                     color = Color.White
                 )
             }
+            
+            // Favorite Button
+            Box(
+                modifier = Modifier
+                    .padding(12.dp)
+                    .align(Alignment.TopEnd)
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.2f))
+                    .clickable { favoriteViewModel.toggleFavorite(car.id) }
+                    .padding(6.dp)
+            ) {
+                Icon(
+                    imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                    contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
+                    tint = if (isFavorite) Color(0xFFFF4444) else Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
     }
 }
@@ -1787,4 +1686,188 @@ fun PopularCarItem(
 @Composable
 fun HomeScreenPreview() {
     HomeScreen()
+}
+
+/**
+ * Screen that displays the user's favorite cars.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FavoritesScreen(
+    onBackClick: () -> Unit = {},
+    onCarClick: (String) -> Unit = {},
+    favoriteViewModel: FavoriteViewModel = hiltViewModel()
+) {
+    // Calculate top padding based on status bar height
+    val topPadding = with(LocalDensity.current) {
+        WindowInsets.statusBars.getTop(this).toDp()
+    }
+    
+    // Observe favorite cars
+    val uiState by favoriteViewModel.uiState.collectAsState()
+    val favoriteCars by favoriteViewModel.favoriteCars.collectAsState()
+    val context = LocalContext.current
+    
+    // Load favorite cars when the screen is first displayed
+    LaunchedEffect(Unit) {
+        favoriteViewModel.loadFavoriteCars()
+    }
+    
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF2F5FA))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = topPadding)
+        ) {
+            // Header with back button
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 30.dp, start = 15.dp, end = 15.dp, bottom = 10.dp)
+            ) {
+                // Back button
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .size(45.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFFFFFFF))
+                        .clickable { onBackClick() }
+                ) {
+                    IconButton(
+                        onClick = { onBackClick() },
+                        modifier = Modifier.size(45.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Back",
+                            tint = Color.Black,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                }
+
+                // Title "Favorites" at the center
+                Text(
+                    text = "Favorites",
+                    fontSize = 23.sp,
+                    fontFamily = poppins,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.Black,
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+            
+            // Content based on UI state
+            when (uiState) {
+                is FavoriteUiState.Loading -> {
+                    // Show loading indicator
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = Color(0xFF149459))
+                    }
+                }
+                is FavoriteUiState.Error -> {
+                    // Show error message
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            Text(
+                                text = "Error loading favorites",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color.Red,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = (uiState as FavoriteUiState.Error).message,
+                                fontSize = 14.sp,
+                                color = Color.Gray,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Button(
+                                onClick = { favoriteViewModel.loadFavoriteCars() },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFF149459)
+                                )
+                            ) {
+                                Text("Retry")
+                            }
+                        }
+                    }
+                }
+                is FavoriteUiState.Empty -> {
+                    // Show empty state
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "No favorites",
+                                tint = Color.Gray,
+                                modifier = Modifier.size(80.dp)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = "No favorite cars yet",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color.Black,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Add cars to your favorites to see them here",
+                                fontSize = 14.sp,
+                                color = Color.Gray,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                }
+                is FavoriteUiState.Success -> {
+                    // Show favorite cars list
+                    LazyColumn(
+                        contentPadding = PaddingValues(bottom = 16.dp),
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        items(favoriteCars) { car ->
+                            CarItem(
+                                car = car,
+                                onClick = { onCarClick(car.id.toString()) },
+                                favoriteViewModel = favoriteViewModel
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun FavoritesScreenPreview() {
+    FavoritesScreen()
 }

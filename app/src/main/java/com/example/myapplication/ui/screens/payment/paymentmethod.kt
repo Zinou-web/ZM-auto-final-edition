@@ -1,7 +1,5 @@
 package com.example.myapplication.ui.screens.payment
 
-
-
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -22,7 +20,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.R
+import com.example.myapplication.ui.screens.home.BookingViewModel
 import com.example.myapplication.ui.theme.poppins
 
 private const val CASH = "Cash"
@@ -38,8 +38,9 @@ data class PaymentMethodOption(
 @Composable
 fun PaymentMethodScreen(
     onBackClick: () -> Unit,
-    onContinueClick: () -> Unit,
-    onEdahabiaClick: () -> Unit
+    onEdahabiaClick: () -> Unit,
+    onCashClick: () -> Unit,
+    viewModel: BookingViewModel = viewModel()
 ) {
     var selectedOption by remember { mutableStateOf("") }
     val topPadding = with(LocalDensity.current) {
@@ -116,7 +117,7 @@ fun PaymentMethodScreen(
                     if (selectedOption == CARD) {
                         onEdahabiaClick()
                     } else if (selectedOption == CASH) {
-                        onContinueClick()
+                        onCashClick()
                     }
                 },
                 enabled = selectedOption.isNotEmpty(),
@@ -282,8 +283,8 @@ fun PreviewPaymentMethod() {
     MaterialTheme {
         PaymentMethodScreen(
             onBackClick = {},
-            onContinueClick = {},
-            onEdahabiaClick = {}
+            onEdahabiaClick = {},
+            onCashClick = {}
         )
     }
 }

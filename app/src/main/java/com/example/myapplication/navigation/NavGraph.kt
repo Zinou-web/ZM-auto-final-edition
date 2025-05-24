@@ -50,12 +50,14 @@ import com.example.myapplication.ui.screens.home.CompleteYourBookingScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.data.preference.AuthPreferenceManager
 import com.example.myapplication.ui.screens.home.BookingViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.myapplication.ui.screens.home.FavoritesScreen
 
 /**
  * Enum class that contains all the possible screens in our app
  * This makes it easier to manage screen routes and prevents typos
  */
-enum class Screen {
+enum class AppScreen {
     // Splash Screen Sequence
     SplashSequence,
 
@@ -109,7 +111,8 @@ enum class Screen {
     PrivacyPolicy,
     Logout,
     ProfileGeneral,
-    ProfileLocation
+    ProfileLocation,
+    Favorites
 }
 
 /**
@@ -122,7 +125,7 @@ enum class Screen {
 @Composable
 fun NavGraph(
     navController: NavHostController,
-    startDestination: Screen = Screen.SplashSequence
+    startDestination: AppScreen = AppScreen.SplashSequence
 ) {
     // Add global navigation logging
     navController.addOnDestinationChangedListener { _, destination, _ ->
@@ -131,96 +134,96 @@ fun NavGraph(
 
     // Get the context for creating the AuthPreferenceManager
     val context = LocalContext.current
-    
+
     // Create a shared CarViewModel that will be used by both Home and Filter screens
     val sharedCarViewModel = viewModel<com.example.myapplication.ui.screens.home.CarViewModel>()
     
     // Create a shared BookingViewModel for the booking flow
     val sharedBookingViewModel = viewModel<BookingViewModel>()
-    
+
     NavHost(
         navController = navController,
         startDestination = startDestination.name
     ) {
         // Splash Screen Sequence
-        composable(Screen.SplashSequence.name) {
+        composable(AppScreen.SplashSequence.name) {
             // Return to original flow: Splash → Welcome
             SplashScreenSequence(
                 onNavigateToWelcome = { 
                     // Navigate to Welcome screen as originally intended
-                    navController.navigate(Screen.Welcome.name)
+                    navController.navigate(AppScreen.Welcome.name)
                 }
             )
         }
 
         // Onboarding Screens
-        composable(Screen.Welcome.name) {
+        composable(AppScreen.Welcome.name) {
             WelcomeScreen(
                 onNextClick = { 
                     // Navigate to Second screen as originally intended
-                    navController.navigate(Screen.Second.name)
+                    navController.navigate(AppScreen.Second.name)
                 }
             )
         }
 
-        composable(Screen.Second.name) {
+        composable(AppScreen.Second.name) {
             SecondScreen(
                 onBackClick = { navController.popBackStack() },
-                onNextClick = { navController.navigate(Screen.Third.name) },
-                onSkipClick = { navController.navigate(Screen.SignIn.name) }
+                onNextClick = { navController.navigate(AppScreen.Third.name) },
+                onSkipClick = { navController.navigate(AppScreen.SignIn.name) }
             )
         }
 
-        composable(Screen.Third.name) {
+        composable(AppScreen.Third.name) {
             ThirdScreen(
                 onBackClick = { navController.popBackStack() },
                 onNextClick = { 
                     Log.d("Navigation", "ThirdScreen: Next button clicked, navigating to SignIn")
-                    navController.navigate(Screen.SignIn.name) {
+                    navController.navigate(AppScreen.SignIn.name) {
                         // Clear back stack up to Third screen
-                        popUpTo(Screen.Third.name) { inclusive = true }
+                        popUpTo(AppScreen.Third.name) { inclusive = true }
                     }
                 }
             )
         }
 
         // Authentication Screens
-        composable(Screen.SignIn.name) {
+        composable(AppScreen.SignIn.name) {
             SignInScreen(
-                onNavigateToRegister = { navController.navigate(Screen.CreateAccount.name) },
-                onNavigateToForgotPassword = { navController.navigate(Screen.ForgotPassword.name) },
-                onSignInSuccess = { navController.navigateAndClear(Screen.Home.name) }
+                onNavigateToRegister = { navController.navigate(AppScreen.CreateAccount.name) },
+                onNavigateToForgotPassword = { navController.navigate(AppScreen.ForgotPassword.name) },
+                onSignInSuccess = { navController.navigateAndClear(AppScreen.Home.name) }
             )
         }
 
-        composable(Screen.CreateAccount.name) {
+        composable(AppScreen.CreateAccount.name) {
             CreateAccountScreen(
-                onSignInClick = { navController.navigate(Screen.SignIn.name) },
+                onSignInClick = { navController.navigate(AppScreen.SignIn.name) },
                 onCreateAccountSuccess = { 
                     // Add debug logging
                     Log.d("NavGraph", "Navigating to OTP verification after successful registration")
                     // Navigate to OTP verification and remove CreateAccount from back stack
-                    navController.navigate("${Screen.OTPVerification.name}?fromForgotPassword=false") {
-                        popUpTo(Screen.CreateAccount.name) { inclusive = true }
+                    navController.navigate("${AppScreen.OTPVerification.name}?fromForgotPassword=false") {
+                        popUpTo(AppScreen.CreateAccount.name) { inclusive = true }
                     }
                 }
             )
         }
 
-        composable(Screen.ForgotPassword.name) {
+        composable(AppScreen.ForgotPassword.name) {
             ForgotPasswordScreen(
                 onBack = { navController.popBackStack() },
                 onResetSent = { 
                     // Navigate to reset password screen
-                    navController.navigate("${Screen.ResetPassword.name}") {
-                        popUpTo(Screen.ForgotPassword.name) { inclusive = true }
+                    navController.navigate("${AppScreen.ResetPassword.name}") {
+                        popUpTo(AppScreen.ForgotPassword.name) { inclusive = true }
                     }
                 }
             )
         }
 
         composable(
-            route = "${Screen.ResetPassword.name}?email={email}",
+            route = "${AppScreen.ResetPassword.name}?email={email}",
             arguments = listOf(
                 navArgument("email") {
                     type = NavType.StringType
@@ -235,29 +238,29 @@ fun NavGraph(
                 onBack = { navController.popBackStack() },
                 onResetSuccess = { 
                     // Navigate to sign in screen after successful password reset
-                    navController.navigate(Screen.SignIn.name) {
-                        popUpTo(Screen.ResetPassword.name) { inclusive = true }
+                    navController.navigate(AppScreen.SignIn.name) {
+                        popUpTo(AppScreen.ResetPassword.name) { inclusive = true }
                     }
                 }
             )
         }
 
-        composable(Screen.NewPassword.name) {
+        composable(AppScreen.NewPassword.name) {
             NewPasswordScreen(
                 onBackClick = { navController.popBackStack() },
-                onPasswordResetSuccess = { navController.navigate(Screen.SignIn.name) }
+                onPasswordResetSuccess = { navController.navigate(AppScreen.SignIn.name) }
             )
         }
 
-        composable(Screen.CompleteProfile.name) {
+        composable(AppScreen.CompleteProfile.name) {
             CompleteProfileScreen(
                 onBackClick = { navController.popBackStack() },
-                onProfileCompleted = { navController.navigateAndClear(Screen.Home.name) }
+                onProfileCompleted = { navController.navigateAndClear(AppScreen.Home.name) }
             )
         }
 
         composable(
-            route = "${Screen.OTPVerification.name}?fromForgotPassword={fromForgotPassword}",
+            route = "${AppScreen.OTPVerification.name}?fromForgotPassword={fromForgotPassword}",
             arguments = listOf(
                 navArgument("fromForgotPassword") {
                     type = NavType.BoolType
@@ -271,9 +274,9 @@ fun NavGraph(
                 onBackClick = { navController.popBackStack() },
                 onVerifySuccess = { 
                     if (fromForgotPassword) {
-                        navController.navigate(Screen.NewPassword.name)
+                        navController.navigate(AppScreen.NewPassword.name)
                     } else {
-                        navController.navigate(Screen.CompleteProfile.name)
+                        navController.navigate(AppScreen.CompleteProfile.name)
                     }
                 },
                 fromForgotPassword = fromForgotPassword
@@ -281,49 +284,51 @@ fun NavGraph(
         }
 
         // Main Screens
-        composable(Screen.Home.name) {
+        composable(AppScreen.Home.name) {
             HomeScreen(
-                viewModel = sharedCarViewModel,
-                onCarClick = { carId -> navController.navigate("${Screen.CarDetails.name}/$carId") },
-                onProfileClick = { navController.navigate(Screen.Profile.name) },
-                onFavoriteClick = { navController.navigate(Screen.Favorite.name) },
-                onNotificationClick = { navController.navigate(Screen.Notification.name) },
-                onCatalogClick = { navController.navigate(Screen.MyBooking.name) }
+                onCarClick = { carId -> 
+                    navController.navigate("${AppScreen.CarDetails.name}/$carId") 
+                },
+                onProfileClick = { navController.navigate(AppScreen.Profile.name) },
+                onFavoriteClick = { navController.navigate(AppScreen.Favorites.name) },
+                onSignOut = { navController.navigateAndClear(AppScreen.SignIn.name) },
+                onNotificationClick = { navController.navigate(AppScreen.Notification.name) },
+                onCatalogClick = { navController.navigate(AppScreen.MyBooking.name) }
             )
         }
 
         composable(
-            route = "${Screen.CarDetails.name}/{carId}",
+            route = "${AppScreen.CarDetails.name}/{carId}",
             arguments = listOf(navArgument("carId") { type = NavType.StringType })
         ) { backStackEntry ->
             val carId = backStackEntry.arguments?.getString("carId") ?: ""
             CarDetailsScreen(
                 carId = carId,
                 onBackPressed = { navController.popBackStack() },
-                onGalleryClick = { navController.navigate("${Screen.Gallery.name}/$carId") },
+                onGalleryClick = { navController.navigate("${AppScreen.Gallery.name}/$carId") },
                 onBookNowClick = { 
                     Log.d("NavGraph", "CarDetailsScreen: Navigating to CarBookingScreen with carId: $carId")
-                    navController.navigate("${Screen.CarBooking.name}/$carId") // Pass carId to CarBookingScreen
+                    navController.navigate("${AppScreen.CarBooking.name}/$carId") // Pass carId to CarBookingScreen
                 }
             )
         }
 
         // Filter Screen - no longer needed since we're handling filters in the HomeScreen
-        // composable(Screen.Filter.name) {
+        // composable(AppScreen.Filter.name) {
         //     Filter(
         //         viewModel = sharedCarViewModel,
         //         onBackClick = { navController.popBackStack() }
         //     )
         // }
 
-        composable(Screen.Notification.name) {
+        composable(AppScreen.Notification.name) {
             NotificationScreen(
                 onBackPressed = { navController.popBackStack() }
             )
         }
 
         composable(
-            route = "${Screen.Gallery.name}/{carId}",
+            route = "${AppScreen.Gallery.name}/{carId}",
             arguments = listOf(navArgument("carId") { type = NavType.StringType })
         ) { backStackEntry ->
             val carId = backStackEntry.arguments?.getString("carId")
@@ -332,8 +337,8 @@ fun NavGraph(
                 onBackPressed = { navController.popBackStack() },
                 onAboutClick = { 
                     if (carId != null) {
-                        navController.navigate("${Screen.CarDetails.name}/$carId") {
-                            popUpTo("${Screen.Gallery.name}/$carId") { inclusive = true }
+                        navController.navigate("${AppScreen.CarDetails.name}/$carId") {
+                            popUpTo("${AppScreen.Gallery.name}/$carId") { inclusive = true }
                         }
                     } else {
                         navController.popBackStack()
@@ -342,148 +347,168 @@ fun NavGraph(
                 onBookNowClick = { 
                     Log.d("NavGraph", "GalleryScreen: Navigating to CarBookingScreen with carId: $carId")
                     if (carId != null) {
-                        navController.navigate("${Screen.CarBooking.name}/$carId") // Pass carId to CarBookingScreen
+                        navController.navigate("${AppScreen.CarBooking.name}/$carId") // Pass carId to CarBookingScreen
                     } else {
-                        navController.navigate(Screen.CarBooking.name)
+                        navController.navigate(AppScreen.CarBooking.name)
                     }
                 }
             )
         }
 
-        composable(Screen.Profile.name) {
+        composable(AppScreen.Profile.name) {
             ProfileScreen(
                 navController = navController,
-                onHomeClick = { navController.navigateAndClear(Screen.Home.name) },
-                onBookingsClick = { navController.navigate(Screen.MyBooking.name) },
-                onFavoriteClick = { navController.navigate(Screen.Favorite.name) },
+                onHomeClick = { navController.navigateAndClear(AppScreen.Home.name) },
+                onBookingsClick = { navController.navigate(AppScreen.MyBooking.name) },
+                onFavoriteClick = { navController.navigate(AppScreen.Favorites.name) },
                 onBackClick = { navController.popBackStack() }
             )
         }
 
         // Booking Screens
-        composable(Screen.MyBooking.name) {
+        composable(AppScreen.MyBooking.name) {
             MyBookingsScreen(
                 navController = navController,
                 onBackClick = { navController.popBackStack() },
-                onHomeClick = { navController.navigateAndClear(Screen.Home.name) },
-                onFavoriteClick = { navController.navigate(Screen.Favorite.name) },
-                onProfileClick = { navController.navigate(Screen.Profile.name) },
-                onCompletedTabClick = { navController.navigate(Screen.CompletedBooking.name) }
+                onHomeClick = { navController.navigateAndClear(AppScreen.Home.name) },
+                onFavoriteClick = { navController.navigate(AppScreen.Favorites.name) },
+                onProfileClick = { navController.navigate(AppScreen.Profile.name) },
+                onCompletedTabClick = { navController.navigate(AppScreen.CompletedBooking.name) }
             )
         }
 
-        composable(Screen.CompletedBooking.name) {
+        composable(AppScreen.CompletedBooking.name) {
             CompletedBookingsScreen(
                 onBackClick = { navController.popBackStack() },
-                onHomeClick = { navController.navigateAndClear(Screen.Home.name) },
-                onMyBookingsClick = { navController.navigate(Screen.MyBooking.name) },
-                onFavoriteClick = { navController.navigate(Screen.Favorite.name) },
-                onProfileClick = { navController.navigate(Screen.Profile.name) },
-                onUpcomingTabClick = { navController.navigate(Screen.MyBooking.name) },
-                onRebookClick = { 
-                    navController.navigate("${Screen.CarDetails.name}/rebook") 
+                onHomeClick = { navController.navigateAndClear(AppScreen.Home.name) },
+                onMyBookingsClick = { navController.navigate(AppScreen.MyBooking.name) },
+                onFavoriteClick = { navController.navigate(AppScreen.Favorites.name) },
+                onProfileClick = { navController.navigate(AppScreen.Profile.name) },
+                onUpcomingTabClick = { navController.navigate(AppScreen.MyBooking.name) },
+                onRebookClick = { carId -> 
+                    navController.navigate("${AppScreen.CarBooking.name}/$carId") 
                 }
             )
         }
 
         // Favorite Screen
-        composable(Screen.Favorite.name) {
-            FavoriteScreen(
-                onBackClick = { navController.popBackStack() },
-                onHomeClick = { navController.navigateAndClear(Screen.Home.name) },
-                onBookingsClick = { navController.navigate(Screen.MyBooking.name) },
-                onProfileClick = { navController.navigate(Screen.Profile.name) },
-                onCarClick = { carId -> 
-                    navController.navigate("${Screen.CarDetails.name}/$carId")
+        composable(AppScreen.Favorite.name) {
+            // Redirect to new Favorites screen
+            LaunchedEffect(Unit) {
+                navController.navigate(AppScreen.Favorites.name) {
+                    popUpTo(AppScreen.Favorite.name) { inclusive = true }
                 }
-            )
+            }
         }
 
         // Payment Screens
-        composable(Screen.PaymentMethod.name) {
+        composable(AppScreen.PaymentMethod.name) {
             PaymentMethodScreen(
                 onBackClick = { navController.popBackStack() },
-                onContinueClick = { navController.navigate(Screen.PaymentPending.name) },
-                onEdahabiaClick = { navController.navigate(Screen.Edahabia.name) }
-            )
-        }
-
-        composable(Screen.Edahabia.name) {
-            EdahabiaScreen(
-                onBackClick = { navController.popBackStack() },
-                onContinueClick = { navController.navigate(Screen.Bill.name) }
-            )
-        }
-
-        composable(Screen.Bill.name) {
-            BillScreen(
-                onBackClick = { navController.popBackStack() },
-                onContinueClick = { 
-                    // On confirm payment, navigate to payment done screen
-                    // In a real app, this would check payment success/failure
-                    navController.navigate(Screen.PaymentDone.name)
-                    // To show unsuccessful payment in case of failure:
-                    // navController.navigate(Screen.UnsuccessfulPayment.name)
+                onEdahabiaClick = { 
+                    // Extract car and reservation ID from booking view model
+                    val carId = sharedBookingViewModel.carId
+                    // Navigate to Edahabia screen with reservation ID
+                    navController.navigate(AppScreen.Edahabia.name)
+                },
+                onCashClick = { 
+                    // Navigate to Payment Pending when Cash payment option is selected
+                    navController.navigate(AppScreen.PaymentPending.name)
                 },
                 viewModel = sharedBookingViewModel
             )
         }
 
-        composable(Screen.Cancelation.name) {
+        composable(AppScreen.Edahabia.name) {
+            EdahabiaScreen(
+                onBackClick = { navController.popBackStack() },
+                onContinueClick = { 
+                    // Navigate to Bill screen
+                    navController.navigate(AppScreen.Bill.name)
+        }
+                // No need to explicitly pass BookingViewModel as it's provided via viewModel()
+                // and PaymentViewModel is injected by Hilt
+            )
+        }
+
+        composable(AppScreen.Bill.name) {
+            BillScreen(
+                onBackClick = { navController.popBackStack() },
+                onContinueClick = { 
+                    // Navigate to PaymentDone or UnsuccessfulPayment based on payment result
+                    // For demo purposes, we'll always go to PaymentDone
+                    navController.navigate(AppScreen.PaymentDone.name)
+                },
+                viewModel = sharedBookingViewModel,
+                reservationViewModel = hiltViewModel()
+            )
+        }
+
+        composable(
+            route = "${AppScreen.Cancelation.name}?reservationId={reservationId}",
+            arguments = listOf(
+                navArgument("reservationId") {
+                    type = NavType.LongType
+                    defaultValue = 0L
+                }
+            )
+        ) { backStackEntry ->
+            val reservationId = backStackEntry.arguments?.getLong("reservationId") ?: 0L
             CancelationScreen(
-                onBackClick = { navController.popBackStack() }
+                onBackClick = { navController.popBackStack() },
+                reservationId = reservationId
             )
         }
 
         // Profile Screens
-        composable(Screen.Settings.name) {
+        composable(AppScreen.Settings.name) {
             SettingsScreen(
                 navController = navController,
                 onBackClick = { navController.popBackStack() }
             )
         }
 
-        composable(Screen.NotificationSettings.name) {
+        composable(AppScreen.NotificationSettings.name) {
             NotificationSettingsScreen(
                 onBackClick = { navController.popBackStack() }
             )
         }
 
-        composable(Screen.HelpCenter.name) {
+        composable(AppScreen.HelpCenter.name) {
             HelpCenterScreen(
                 onBackClick = { navController.popBackStack() }
             )
         }
 
-        composable(Screen.PrivacyPolicy.name) {
+        composable(AppScreen.PrivacyPolicy.name) {
             PrivacyPolicyScreen(
                 onBackClick = { navController.popBackStack() }
             )
         }
 
-        composable(Screen.Logout.name) {
+        composable(AppScreen.Logout.name) {
             logoutScreen(
                 navController = navController,
-                onHomeClick = { navController.navigateAndClear(Screen.Home.name) },
-                onBookingsClick = { navController.navigate(Screen.MyBooking.name) },
-                onFavoriteClick = { navController.navigate(Screen.Favorite.name) },
+                onHomeClick = { navController.navigateAndClear(AppScreen.Home.name) },
+                onBookingsClick = { navController.navigate(AppScreen.MyBooking.name) },
+                onFavoriteClick = { navController.navigate(AppScreen.Favorites.name) },
                 onBackClick = { navController.popBackStack() }
             )
         }
 
-        composable(Screen.ProfileGeneral.name) {
+        composable(AppScreen.ProfileGeneral.name) {
             UpdateProfileScreen(
                 navController = navController
             )
         }
 
-        composable(Screen.ProfileLocation.name) {
+        composable(AppScreen.ProfileLocation.name) {
             UpdateProfileLocationScreen(
                 navController = navController
             )
         }
 
-        composable(Screen.PasswordManager.name) {
+        composable(AppScreen.PasswordManager.name) {
             ChangePasswordScreen(
                 onBackClick = { navController.popBackStack() },
                 onPasswordChangeSuccess = { navController.popBackStack() }
@@ -492,7 +517,7 @@ fun NavGraph(
 
         // CarBookingScreen route (with/without driver selection) - updated to accept carId
         composable(
-            route = "${Screen.CarBooking.name}/{carId}",
+            route = "${AppScreen.CarBooking.name}/{carId}",
             arguments = listOf(navArgument("carId") { 
                 type = NavType.StringType 
                 defaultValue = ""
@@ -507,41 +532,65 @@ fun NavGraph(
                 onContinue = {
                     // Navigate to CompleteYourBookingScreen now
                     Log.d("NavGraph", "CarBookingScreen: Continue clicked, navigating to CompleteYourBooking")
-                    navController.navigate(Screen.CompleteYourBooking.name)
+                    navController.navigate(AppScreen.CompleteYourBooking.name)
                 },
-                bookingViewModel = sharedBookingViewModel
+                bookingViewModel = sharedBookingViewModel,
+                reservationViewModel = hiltViewModel()
             )
         }
         
         // Add the CompleteYourBookingScreen route back
-        composable(Screen.CompleteYourBooking.name) {
+        composable(AppScreen.CompleteYourBooking.name) {
             CompleteYourBookingScreen(
                 onBackPressed = { navController.popBackStack() },
                 onContinue = { 
                     // Navigate to payment method screen
                     Log.d("NavGraph", "CompleteYourBookingScreen: Continue clicked, navigating to PaymentMethod")
-                    navController.navigate(Screen.PaymentMethod.name)
+                    navController.navigate(AppScreen.PaymentMethod.name)
                 },
                 bookingViewModel = sharedBookingViewModel
             )
         }
 
-        composable(Screen.PaymentPending.name) {
+        composable(AppScreen.PaymentPending.name) {
             PaymentPending(
-                onBackToMainClick = { navController.navigateAndClear(Screen.Home.name) }
+                onBackToHomeClick = { navController.navigateAndClear(AppScreen.Home.name) }
             )
         }
 
-        composable(Screen.PaymentDone.name) {
+        composable(AppScreen.PaymentDone.name) {
             PaymentDoneScreen(
-                onBackToMainClick = { navController.navigateAndClear(Screen.Home.name) }
+                onBackToHomeClick = { 
+                    // Navigate back to home screen and clear back stack
+                    navController.navigate(AppScreen.Home.name) {
+                        popUpTo(AppScreen.Home.name) { inclusive = true }
+                    }
+                }
             )
         }
 
-        composable(Screen.UnsuccessfulPayment.name) {
+        composable(AppScreen.UnsuccessfulPayment.name) {
             UnsuccessfulPaymentScreen(
+                onTryAgainClick = {
+                    // Go back to previous screen to try again 
+                    navController.popBackStack()
+                },
+                onCancelClick = {
+                    // Navigate back to home screen and clear back stack
+                    navController.navigate(AppScreen.Home.name) {
+                        popUpTo(AppScreen.Home.name) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        // Favorite Screen
+        composable(AppScreen.Favorites.name) {
+            FavoritesScreen(
                 onBackClick = { navController.popBackStack() },
-                onTryAgainClick = { navController.navigate(Screen.PaymentMethod.name) }
+                onCarClick = { carId -> 
+                    navController.navigate("${AppScreen.CarDetails.name}/$carId")
+                }
             )
         }
     }

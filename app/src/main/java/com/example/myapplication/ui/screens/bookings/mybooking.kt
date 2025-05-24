@@ -10,6 +10,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.LocalGasStation
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -37,6 +43,8 @@ import com.example.myapplication.ui.screens.BookingCar.ReservationViewModel
 import java.time.format.DateTimeFormatter
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.layout.ContentScale
+import com.example.myapplication.ui.screens.home.FavoriteViewModel
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -227,14 +235,24 @@ fun MyBookingsScreen(
                         UpcomingBookingsList(
                             reservations = upcomingReservations,
                             onCancelClick = { reservationId -> 
-                                viewModel.cancelReservation(reservationId)
+                                // Navigate to CancellationScreen with the reservation ID
+                                navController.navigate("${Screen.Cancelation.name}?reservationId=${reservationId}")
                             },
                             onBillClick = { reservationId ->
                                 navController.navigate(Screen.Bill.name)
                             },
                             onCarClick = { carId ->
                                 navController.navigate("${Screen.CarDetails.name}/$carId")
-                            }
+                            },
+                            onModifyClick = { reservation ->
+                                // Set the selected reservation for modification
+                                viewModel.setSelectedReservation(reservation)
+                                
+                                // Navigate to CarBookingScreen with the car ID
+                                // The CarBookingScreen will check if there's a selected reservation
+                                navController.navigate("${Screen.CarBooking.name}/${reservation.carId}")
+                            },
+                            favoriteViewModel = hiltViewModel()
                         )
                     }
                 }
@@ -322,7 +340,9 @@ fun UpcomingBookingsList(
     reservations: List<Reservation>,
     onCancelClick: (Long) -> Unit,
     onBillClick: (Long) -> Unit,
-    onCarClick: (Long) -> Unit
+    onCarClick: (Long) -> Unit,
+    onModifyClick: (Reservation) -> Unit = {},
+    favoriteViewModel: FavoriteViewModel = hiltViewModel()
 ) {
     LazyColumn(
         contentPadding = PaddingValues(16.dp),
@@ -334,7 +354,9 @@ fun UpcomingBookingsList(
                 reservation = reservation,
                 onCancelClick = { onCancelClick(reservation.id) },
                 onBillClick = { onBillClick(reservation.id) },
-                onCarClick = { onCarClick(reservation.carId) }
+                onCarClick = { onCarClick(reservation.carId) },
+                onModifyClick = { onModifyClick(reservation) },
+                favoriteViewModel = favoriteViewModel
             )
         }
     }
@@ -345,159 +367,305 @@ fun UpcomingBookingItem(
     reservation: Reservation,
     onCancelClick: () -> Unit,
     onBillClick: () -> Unit,
-    onCarClick: () -> Unit
+    onCarClick: () -> Unit,
+    onModifyClick: () -> Unit = {},
+    favoriteViewModel: FavoriteViewModel = hiltViewModel()
 ) {
-    val dateFormatter = DateTimeFormatter.ofPattern("MMM dd, yyyy")
-    val startDate = reservation.startDate.format(dateFormatter)
-    val endDate = reservation.endDate.format(dateFormatter)
+    // Get car ID from reservation
+    val carId = reservation.car?.id ?: 0L
     
-    Card(
+    // Get favorite status from ViewModel
+    val favoriteStatusMap by favoriteViewModel.favoriteStatusMap.collectAsState()
+    val isFavorite = favoriteStatusMap[carId] ?: false
+    
+    // Check favorite status for this car when first displayed
+    LaunchedEffect(carId) {
+        favoriteViewModel.checkFavoriteStatus(carId)
+    }
+
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onCarClick),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            .padding(horizontal = 8.dp, vertical = 12.dp)
+            .clickable(onClick = onCarClick)
     ) {
-        Column(
+        // Outer white card containing everything
+        Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .heightIn(min = 500.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
-            // Car details
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(18.dp)
             ) {
-                Column {
+                // Car Image with padding inside a card
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        // Car Image
+                        Image(
+                            painter = painterResource(id = R.drawable.car_placeholder),
+                            contentDescription = "${reservation.car?.brand} ${reservation.car?.model}",
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.fillMaxSize()
+                        )
+
+                        // Rating Badge
+                        Box(
+                            modifier = Modifier
+                                .padding(start = 12.dp, top = 12.dp)
+                                .align(Alignment.TopStart)
+                        ) {
+                            Card(
+                                shape = RoundedCornerShape(8.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color.White),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Star,
+                                        contentDescription = "Rating",
+                                        tint = Color(0xFFFFC107),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+
+                                    Spacer(modifier = Modifier.width(4.dp))
+
+                                    Text(
+                                        text = "${reservation.car?.rating ?: 5}",
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.Black
+                                    )
+                                }
+                            }
+                        }
+
+                        // Heart Icon - Now integrated with FavoriteViewModel
+                        Box(
+                            modifier = Modifier
+                                .padding(end = 12.dp, top = 12.dp)
+                                .align(Alignment.TopEnd)
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(Color.White)
+                                .clickable { favoriteViewModel.toggleFavorite(carId) }
+                                .padding(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                                contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
+                                tint = if (isFavorite) Color(0xFFFF4444) else Color.Gray,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Car Title and Price
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    // Car Name
                     Text(
-                        text = "${reservation.car?.brand ?: "Car"} ${reservation.car?.model ?: ""}",
+                        text = "${reservation.car?.brand ?: "Toyota"} ${reservation.car?.model ?: "Corolla"}",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.Black
                     )
-                    
+
+                    // Price
                     Text(
-                        text = "Booking ID: ${reservation.id}",
-                        fontSize = 14.sp,
-                        color = Color.Gray
-                    )
-                }
-                
-                // Status chip
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(
-                            when (reservation.status) {
-                                "CONFIRMED" -> Color(0xFF149459).copy(alpha = 0.1f)
-                                "PENDING" -> Color(0xFFFFA000).copy(alpha = 0.1f)
-                                else -> Color(0xFF149459).copy(alpha = 0.1f)
-                            }
-                        )
-                        .padding(horizontal = 12.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = reservation.status,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = when (reservation.status) {
-                            "CONFIRMED" -> Color(0xFF149459)
-                            "PENDING" -> Color(0xFFFFA000)
-                            else -> Color(0xFF149459)
-                        }
-                    )
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            // Divider
-            Divider(color = Color.LightGray.copy(alpha = 0.5f))
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            // Booking period
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column {
-                    Text(
-                        text = "From",
-                        fontSize = 12.sp,
-                        color = Color.Gray
-                    )
-                    
-                    Text(
-                        text = startDate,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.Black
-                    )
-                }
-                
-                Column {
-                    Text(
-                        text = "To",
-                        fontSize = 12.sp,
-                        color = Color.Gray
-                    )
-                    
-                    Text(
-                        text = endDate,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.Black
-                    )
-                }
-                
-                Column {
-                    Text(
-                        text = "Total",
-                        fontSize = 12.sp,
-                        color = Color.Gray
-                    )
-                    
-                    Text(
-                        text = "${reservation.totalPrice}DA",
-                        fontSize = 14.sp,
+                        text = "${reservation.totalPrice}DA / day",
+                        fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Color(0xFF149459)
                     )
                 }
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            // Buttons
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Button(
-                    onClick = onCancelClick,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.White,
-                        contentColor = Color.Red
-                    ),
-                    border = BorderStroke(1.dp, Color.Red),
-                    modifier = Modifier.weight(1f)
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Add divider here
+                Divider(
+                    modifier = Modifier.fillMaxWidth(),
+                    thickness = 1.dp,
+                    color = Color.Gray.copy(alpha = 0.3f)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Feature Icons - EXACTLY as in Home
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
                 ) {
-                    Text("Cancel")
+                    // Type
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Settings,
+                            contentDescription = "Type",
+                            tint = Color(0xFF149459),
+                            modifier = Modifier.size(24.dp)
+                        )
+                        
+                        Spacer(modifier = Modifier.height(4.dp))
+                        
+                        Text(
+                            text = reservation.car?.type ?: "Hatchback",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color.Gray
+                        )
+                    }
+                    
+                    // Transmission
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Speed,
+                            contentDescription = "Transmission",
+                            tint = Color(0xFF149459),
+                            modifier = Modifier.size(24.dp)
+                        )
+                        
+                        Spacer(modifier = Modifier.height(4.dp))
+                        
+                        Text(
+                            text = "Automatic",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color.Gray
+                        )
+                    }
+                    
+                    // Fuel
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.LocalGasStation,
+                            contentDescription = "Fuel",
+                            tint = Color(0xFF149459),
+                            modifier = Modifier.size(24.dp)
+                        )
+                        
+                        Spacer(modifier = Modifier.height(4.dp))
+                        
+                        Text(
+                            text = "Petrol",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color.Gray
+                        )
+                    }
+                }
+
+                // Booking specific parts below
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                // Car Location section
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Car Location",
+                        fontSize = 14.sp,
+                        fontFamily = poppins,
+                        fontWeight = FontWeight.Normal,
+                        color = Color.Gray
+                    )
+                    
+                    Text(
+                        text = "Navigate",
+                        fontSize = 14.sp,
+                        fontFamily = poppins,
+                        fontWeight = FontWeight.Normal,
+                        color = Color.Gray,
+                        modifier = Modifier.clickable { /* Navigate action */ }
+                    )
                 }
                 
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 
-                Button(
-                    onClick = onBillClick,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF149459)
-                    ),
-                    modifier = Modifier.weight(1f)
+                // Map placeholder
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(160.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.LightGray)
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Cancel and Bill buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("View Bill")
+                    // Cancel button
+                    Button(
+                        onClick = onCancelClick,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(50.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF149459)
+                        )
+                    ) {
+                        Text(
+                            text = "Cancel",
+                            fontSize = 16.sp,
+                            fontFamily = poppins,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White
+                        )
+                    }
+
+                    // Bill button
+                    Button(
+                        onClick = onBillClick,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(50.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF149459)
+                        )
+                    ) {
+                        Text(
+                            text = "Bill",
+                            fontSize = 16.sp,
+                            fontFamily = poppins,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White
+                        )
+                    }
                 }
             }
         }

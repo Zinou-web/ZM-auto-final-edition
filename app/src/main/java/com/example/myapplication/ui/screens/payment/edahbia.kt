@@ -1,7 +1,6 @@
 package com.example.myapplication.ui.screens.payment
 
-
-
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -17,28 +16,93 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.R
+import com.example.myapplication.data.model.PaymentMethodType
+import com.example.myapplication.ui.screens.home.BookingViewModel
 import com.example.myapplication.ui.theme.poppins
+import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EdahabiaScreen(
     onBackClick: () -> Unit,
-    onContinueClick: () -> Unit
+    onContinueClick: () -> Unit,
+    paymentViewModel: PaymentViewModel = hiltViewModel(),
+    bookingViewModel: BookingViewModel = viewModel()
 ) {
+    // Local state for UI
     var cardNumber by remember { mutableStateOf("") }
     var cardHolderName by remember { mutableStateOf("") }
     var cvv by remember { mutableStateOf("") }
     var expireDate by remember { mutableStateOf("") }
     var saveCardDetails by remember { mutableStateOf(false) }
+    
+    // Error state
+    var cardNumberError by remember { mutableStateOf<String?>(null) }
+    var cardHolderNameError by remember { mutableStateOf<String?>(null) }
+    var cvvError by remember { mutableStateOf<String?>(null) }
+    var expireDateError by remember { mutableStateOf<String?>(null) }
+    var generalError by remember { mutableStateOf<String?>(null) }
+    
+    // UI state for loading indicator
+    var isLoading by remember { mutableStateOf(false) }
+    
+    // Context for showing toasts
+    val context = LocalContext.current
+    
+    // Collect payment UI state
+    val paymentUiState by paymentViewModel.uiState.collectAsState()
+    
+    // Handle UI state changes
+    LaunchedEffect(paymentUiState) {
+        when (paymentUiState) {
+            is PaymentUiState.Loading -> {
+                isLoading = true
+                generalError = null
+            }
+            is PaymentUiState.Success -> {
+                isLoading = false
+                generalError = null
+                // Navigate to next screen on success
+                onContinueClick()
+            }
+            is PaymentUiState.Error -> {
+                isLoading = false
+                generalError = (paymentUiState as PaymentUiState.Error).message
+            }
+            is PaymentUiState.ValidationError -> {
+                isLoading = false
+                val errors = (paymentUiState as PaymentUiState.ValidationError).errors
+                cardNumberError = errors["cardNumber"]
+                cardHolderNameError = errors["cardHolderName"]
+                cvvError = errors["cvv"]
+                expireDateError = errors["expiryDate"]
+            }
+            is PaymentUiState.Initial -> {
+                isLoading = false
+                generalError = null
+            }
+        }
+    }
+    
+    // Update ViewModel when form values change
+    LaunchedEffect(cardNumber, cardHolderName, cvv, expireDate, saveCardDetails) {
+        paymentViewModel.updateCardNumber(cardNumber)
+        paymentViewModel.updateCardHolderName(cardHolderName)
+        paymentViewModel.updateCvv(cvv)
+        paymentViewModel.updateExpiryDate(expireDate)
+        paymentViewModel.updateSaveCardDetails(saveCardDetails)
+    }
 
     // Calculate top padding based on status bar height
     val topPadding = with(LocalDensity.current) {
@@ -102,18 +166,30 @@ fun EdahabiaScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Card image
-
             Image(
                     painter = painterResource(id = R.drawable.edahbia_card_photos),
                     contentDescription = "Edahabia Card",
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(230.dp)
-
                 )
 
-
             Spacer(modifier = Modifier.height(24.dp))
+
+            // Display general error message if any
+            if (generalError != null) {
+                Text(
+                    text = generalError ?: "",
+                    color = Color.Red,
+                    fontSize = 14.sp,
+                    fontFamily = poppins,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+            }
 
             // Card Number
             Column(
@@ -136,6 +212,7 @@ fun EdahabiaScreen(
                         val digitsOnly = newValue.filter { it.isDigit() }
                         if (digitsOnly.length <= 16) {
                             cardNumber = formatCardNumber(digitsOnly)
+                            cardNumberError = null // Clear error on change
                         }
                     },
                     placeholder = { Text("0000 0000 0000 0000") },
@@ -145,14 +222,26 @@ fun EdahabiaScreen(
                         .background(Color.White, RoundedCornerShape(8.dp)),
                     shape = RoundedCornerShape(8.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color.LightGray,
-                        unfocusedBorderColor = Color.LightGray,
+                        focusedBorderColor = if (cardNumberError == null) Color.LightGray else Color.Red,
+                        unfocusedBorderColor = if (cardNumberError == null) Color.LightGray else Color.Red,
                         focusedContainerColor = Color.White,
                         unfocusedContainerColor = Color.White
                     ),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true
+                    singleLine = true,
+                    isError = cardNumberError != null
                 )
+                
+                // Display error if any
+                if (cardNumberError != null) {
+                    Text(
+                        text = cardNumberError ?: "",
+                        color = Color.Red,
+                        fontSize = 12.sp,
+                        fontFamily = poppins,
+                        modifier = Modifier.padding(top = 4.dp)
+                )
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -174,7 +263,10 @@ fun EdahabiaScreen(
                 
                 OutlinedTextField(
                     value = cardHolderName,
-                    onValueChange = { cardHolderName = it },
+                    onValueChange = { 
+                        cardHolderName = it 
+                        cardHolderNameError = null // Clear error on change
+                    },
                     placeholder = { Text("Name") },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -182,13 +274,25 @@ fun EdahabiaScreen(
                         .background(Color.White, RoundedCornerShape(8.dp)),
                     shape = RoundedCornerShape(8.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color.LightGray,
-                        unfocusedBorderColor = Color.LightGray,
+                        focusedBorderColor = if (cardHolderNameError == null) Color.LightGray else Color.Red,
+                        unfocusedBorderColor = if (cardHolderNameError == null) Color.LightGray else Color.Red,
                         focusedContainerColor = Color.White,
                         unfocusedContainerColor = Color.White
                     ),
-                    singleLine = true
+                    singleLine = true,
+                    isError = cardHolderNameError != null
                 )
+                
+                // Display error if any
+                if (cardHolderNameError != null) {
+                    Text(
+                        text = cardHolderNameError ?: "",
+                        color = Color.Red,
+                        fontSize = 12.sp,
+                        fontFamily = poppins,
+                        modifier = Modifier.padding(top = 4.dp)
+                )
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -215,6 +319,7 @@ fun EdahabiaScreen(
                         value = expireDate,
                         onValueChange = { newValue ->
                             expireDate = formatExpirationDate(newValue)
+                            expireDateError = null // Clear error on change
                         },
                         placeholder = { Text("DD/MM/YYYY") },
                         modifier = Modifier
@@ -223,14 +328,26 @@ fun EdahabiaScreen(
                             .background(Color.White, RoundedCornerShape(8.dp)),
                         shape = RoundedCornerShape(8.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color.LightGray,
-                            unfocusedBorderColor = Color.LightGray,
+                            focusedBorderColor = if (expireDateError == null) Color.LightGray else Color.Red,
+                            unfocusedBorderColor = if (expireDateError == null) Color.LightGray else Color.Red,
                             focusedContainerColor = Color.White,
                             unfocusedContainerColor = Color.White
                         ),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true
+                        singleLine = true,
+                        isError = expireDateError != null
                     )
+                    
+                    // Display error if any
+                    if (expireDateError != null) {
+                        Text(
+                            text = expireDateError ?: "",
+                            color = Color.Red,
+                            fontSize = 12.sp,
+                            fontFamily = poppins,
+                            modifier = Modifier.padding(top = 4.dp)
+                    )
+                    }
                 }
 
                 // CVV
@@ -250,6 +367,7 @@ fun EdahabiaScreen(
                             val digitsOnly = newValue.filter { it.isDigit() }
                             if (digitsOnly.length <= 3) {
                                 cvv = digitsOnly
+                                cvvError = null // Clear error on change
                             }
                         },
                         placeholder = { Text("***") },
@@ -259,14 +377,26 @@ fun EdahabiaScreen(
                             .background(Color.White, RoundedCornerShape(8.dp)),
                         shape = RoundedCornerShape(8.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color.LightGray,
-                            unfocusedBorderColor = Color.LightGray,
+                            focusedBorderColor = if (cvvError == null) Color.LightGray else Color.Red,
+                            unfocusedBorderColor = if (cvvError == null) Color.LightGray else Color.Red,
                             focusedContainerColor = Color.White,
                             unfocusedContainerColor = Color.White
                         ),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true
+                        singleLine = true,
+                        isError = cvvError != null
                     )
+                    
+                    // Display error if any
+                    if (cvvError != null) {
+                        Text(
+                            text = cvvError ?: "",
+                            color = Color.Red,
+                            fontSize = 12.sp,
+                            fontFamily = poppins,
+                            modifier = Modifier.padding(top = 4.dp)
+                    )
+                    }
                 }
             }
 
@@ -307,15 +437,49 @@ fun EdahabiaScreen(
                 .padding(16.dp)
         ) {
             Button(
-                onClick = onContinueClick,
+                onClick = {
+                    // Process the payment
+                    try {
+                        // Check if we have a recently created reservation ID in the ReservationViewModel
+                        // Get the reservation ID either from the BookingViewModel or from the most recent reservation
+                        val reservationId = if (bookingViewModel.reservationId > 0) {
+                            bookingViewModel.reservationId
+                        } else {
+                            // Log debug information
+                            Log.d("EdahabiaScreen", "Using default reservation ID because bookingViewModel.reservationId = ${bookingViewModel.reservationId}")
+                            1L  // Fallback to 1L if no reservation ID is available
+                        }
+                        
+                        // Log the reservation ID being used
+                        Log.d("EdahabiaScreen", "Processing payment for reservation ID: $reservationId")
+                        
+                        paymentViewModel.processPayment(
+                            reservationId = reservationId, 
+                            paymentMethod = PaymentMethodType.EDAHABIA.name,
+                            amount = bookingViewModel.totalPrice
+                        )
+                    } catch (e: Exception) {
+                        // Log and handle any exceptions
+                        Log.e("EdahabiaScreen", "Error processing payment: ${e.message}", e)
+                        generalError = "Payment processing error: ${e.message}"
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
                 shape = RoundedCornerShape(20.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFF149459)
-                )
+                ),
+                enabled = !isLoading
             ) {
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = Color.White,
+                        strokeWidth = 2.dp
+                    )
+                } else {
                 Text(
                     text = "Continue",
                     fontFamily = poppins,
@@ -323,6 +487,7 @@ fun EdahabiaScreen(
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
+                }
             }
         }
     }

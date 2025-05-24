@@ -63,6 +63,10 @@ class ReservationViewModel @Inject constructor(
     private val _pastReservations = MutableStateFlow<List<Reservation>>(emptyList())
     val pastReservations: StateFlow<List<Reservation>> = _pastReservations
     
+    // Currently selected reservation for rebooking or modification
+    private val _selectedReservation = MutableStateFlow<Reservation?>(null)
+    val selectedReservation: StateFlow<Reservation?> = _selectedReservation
+    
     init {
         Log.d(TAG, "ReservationViewModel init block ENTERED (no fatal error).")
         // (no network calls here)
@@ -295,6 +299,129 @@ class ReservationViewModel @Inject constructor(
             } catch (e: Exception) {
                 _reservationState.value = ReservationUiState.Error("Error: ${e.message}")
                 Log.e(TAG, "Exception loading reservation", e)
+            }
+        }
+    }
+    
+    /**
+     * Update an existing reservation.
+     */
+    fun updateReservation(
+        reservationId: Long,
+        startDate: LocalDate,
+        endDate: LocalDate,
+        totalPrice: Double
+    ) {
+        _reservationState.value = ReservationUiState.Loading
+        
+        viewModelScope.launch {
+            try {
+                reservationRepository.updateReservation(
+                    reservationId = reservationId,
+                    startDate = startDate,
+                    endDate = endDate,
+                    totalPrice = totalPrice
+                ).collectLatest { result ->
+                    when (result.status) {
+                        ApiStatus.SUCCESS -> {
+                            result.data?.let { reservation ->
+                                _reservationState.value =
+                                    ReservationUiState.SingleReservationSuccess(reservation)
+                                Log.d(TAG, "Updated reservation with ID: ${reservation.id}")
+                                
+                                // Refresh reservation lists
+                                loadUpcomingReservations()
+                                loadUserReservations()
+                            } ?: run {
+                                _reservationState.value =
+                                    ReservationUiState.Error("Failed to update reservation")
+                            }
+                        }
+                        ApiStatus.ERROR -> {
+                            _reservationState.value = ReservationUiState.Error(
+                                result.message ?: "Failed to update reservation"
+                            )
+                            Log.e(TAG, "Error updating reservation: ${result.message}")
+                        }
+                        ApiStatus.LOADING -> {
+                            // Already set loading state above
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                _reservationState.value = ReservationUiState.Error("Error: ${e.message}")
+                Log.e(TAG, "Exception updating reservation", e)
+            }
+        }
+    }
+    
+    /**
+     * Set a reservation for rebooking or modification.
+     */
+    fun setSelectedReservation(reservation: Reservation) {
+        _selectedReservation.value = reservation
+        Log.d(TAG, "Selected reservation with ID: ${reservation.id} for rebooking/modification")
+    }
+    
+    /**
+     * Clear the selected reservation.
+     */
+    fun clearSelectedReservation() {
+        _selectedReservation.value = null
+        Log.d(TAG, "Cleared selected reservation")
+    }
+    
+    /**
+     * Rebook from a past reservation.
+     * This creates a new reservation based on the details of a past one,
+     * but with updated dates.
+     */
+    fun rebookFromPastReservation(
+        originalReservationId: Long,
+        startDate: LocalDate,
+        endDate: LocalDate
+    ) {
+        // First get the original reservation to use its details
+        viewModelScope.launch {
+            try {
+                reservationRepository.getReservationById(originalReservationId).collectLatest { result ->
+                    when (result.status) {
+                        ApiStatus.SUCCESS -> {
+                            result.data?.let { originalReservation ->
+                                // Calculate new price based on the same daily rate
+                                val daysInNewBooking = endDate.toEpochDay() - startDate.toEpochDay() + 1
+                                val originalDays = originalReservation.endDate.toEpochDay() - 
+                                                  originalReservation.startDate.toEpochDay() + 1
+                                val dailyRate = originalReservation.totalPrice / originalDays
+                                val newTotalPrice = dailyRate * daysInNewBooking
+                                
+                                // Create the new reservation
+                                createReservation(
+                                    carId = originalReservation.carId,
+                                    startDate = startDate,
+                                    endDate = endDate,
+                                    totalPrice = newTotalPrice
+                                )
+                                Log.d(TAG, "Rebooked from reservation ID: $originalReservationId")
+                            } ?: run {
+                                _reservationState.value =
+                                    ReservationUiState.Error("Original reservation not found")
+                            }
+                        }
+                        ApiStatus.ERROR -> {
+                            _reservationState.value = ReservationUiState.Error(
+                                result.message ?: "Failed to load original reservation"
+                            )
+                            Log.e(TAG, "Error loading original reservation: ${result.message}")
+                        }
+                        ApiStatus.LOADING -> {
+                            // Handle loading state
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                _reservationState.value = ReservationUiState.Error("Error: ${e.message}")
+                Log.e(TAG, "Exception rebooking reservation", e)
             }
         }
     }

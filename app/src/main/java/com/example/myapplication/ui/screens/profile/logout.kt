@@ -26,6 +26,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.myapplication.R
 import com.example.myapplication.ui.theme.MyApplicationTheme
 import com.example.myapplication.ui.theme.poppins
+import com.example.myapplication.navigation.AppScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,7 +34,7 @@ fun logoutScreen(
     navController: NavController,
     onHomeClick: () -> Unit = { navController.navigate("Home") },
     onBookingsClick: () -> Unit = { navController.navigate("MyBooking") },
-    onFavoriteClick: () -> Unit = { navController.navigate("Favorite") },
+    onFavoriteClick: () -> Unit = { navController.navigate(AppScreen.Favorites.name) },
     onBackClick: () -> Unit = { navController.popBackStack() }
 ) {
     var showLogoutSheet by remember { mutableStateOf(false) }

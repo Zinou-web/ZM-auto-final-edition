@@ -24,6 +24,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -33,6 +34,7 @@ import androidx.navigation.compose.rememberNavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.myapplication.R
 import com.example.myapplication.navigation.Screen
+import com.example.myapplication.navigation.AppScreen
 import com.example.myapplication.ui.theme.MyApplicationTheme
 import com.example.myapplication.ui.theme.poppins
 import androidx.compose.foundation.text.KeyboardOptions
@@ -47,7 +49,7 @@ fun ProfileScreen(
     viewModel: ProfileViewModel = hiltViewModel(),
     onHomeClick: () -> Unit = { navController.navigate(Screen.Home.name) },
     onBookingsClick: () -> Unit = { navController.navigate(Screen.MyBooking.name) },
-    onFavoriteClick: () -> Unit = { navController.navigate(Screen.Favorite.name) },
+    onFavoriteClick: () -> Unit = { navController.navigate(AppScreen.Favorites.name) },
     onBackClick: () -> Unit = { navController.popBackStack() }
 ) {
     val context = LocalContext.current
@@ -218,22 +220,22 @@ fun ProfileScreen(
                 ProfileOption(
                     icon = R.drawable.profil,
                     label = "Your Profile"
-                ) { navController.navigate(Screen.ProfileGeneral.name) }
+                ) { navController.navigate(Screen.ProfileGeneral.route) }
 
                 ProfileOption(
                     icon = R.drawable.setting_line,
                     label = "Settings"
-                ) { navController.navigate(Screen.Settings.name) }
+                ) { navController.navigate(AppScreen.Settings.name) }
 
                 ProfileOption(
                     icon = R.drawable.mdi_question_mark_circle_outline,
                     label = "Help & Support"
-                ) { navController.navigate(Screen.HelpCenter.name) }
+                ) { navController.navigate(Screen.HelpCenter.route) }
 
                 ProfileOption(
                     icon = R.drawable.ic_outline_lock,
                     label = "Privacy & Policy"
-                ) { navController.navigate(Screen.PrivacyPolicy.name) }
+                ) { navController.navigate(Screen.PrivacyPolicy.route) }
 
                 Divider(modifier = Modifier.padding(vertical = 16.dp))
 
@@ -241,7 +243,7 @@ fun ProfileScreen(
                 icon = R.drawable.log_out_icons,
                 label = "Log Out",
                 showArrow = false
-            ) { navController.navigate(Screen.Logout.name) }
+            ) { navController.navigate(Screen.Logout.route) }
             }
         }
 

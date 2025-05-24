@@ -41,6 +41,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.myapplication.R
 import com.example.myapplication.navigation.Screen
 import com.example.myapplication.ui.theme.poppins
+import com.example.myapplication.navigation.AppScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -121,7 +122,7 @@ fun SettingsScreen(
                     text = "Notification Settings",
                     accentColor = accentColor,
                     showDivider = true,
-                    onClick = { navController.navigate(Screen.NotificationSettings.name) }
+                    onClick = { navController.navigate(AppScreen.NotificationSettings.name) }
                 )
 
                 SettingItem(
@@ -129,7 +130,7 @@ fun SettingsScreen(
                     text = "Password Manager",
                     accentColor = accentColor,
                     showDivider = true,
-                    onClick = { navController.navigate(Screen.PasswordManager.name) }
+                    onClick = { navController.navigate(Screen.PasswordManager.route) }
                 )
 
                 SettingItem(
@@ -192,7 +193,7 @@ fun SettingsScreen(
                             onClick = {
                                 showDeleteAccountSheet = false
                                 // TODO: Perform account deletion logic here
-                                navController.navigate(Screen.SignIn.name) {
+                                navController.navigate(AppScreen.SignIn.name) {
                                     popUpTo(0) { inclusive = true }
                                 }
                             },

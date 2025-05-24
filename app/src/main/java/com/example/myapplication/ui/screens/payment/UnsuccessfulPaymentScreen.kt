@@ -1,5 +1,6 @@
 package com.example.myapplication.ui.screens.payment
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -27,8 +28,8 @@ import com.example.myapplication.ui.theme.poppins
 
 @Composable
 fun UnsuccessfulPaymentScreen(
-    onBackClick: () -> Unit,
-    onTryAgainClick: () -> Unit
+    onTryAgainClick: () -> Unit,
+    onCancelClick: () -> Unit
 ) {
     // Calculate top padding based on status bar height
     val topPadding = with(LocalDensity.current) {
@@ -58,10 +59,10 @@ fun UnsuccessfulPaymentScreen(
                         .size(45.dp)
                         .clip(CircleShape)
                         .background(Color(0xFFFFFFFF))
-                        .clickable { onBackClick() }
+                        .clickable { onCancelClick() }
                 ) {
                     IconButton(
-                        onClick = { onBackClick() },
+                        onClick = { onCancelClick() },
                         modifier = Modifier.size(45.dp)
                     ) {
                         Image(
@@ -146,6 +147,32 @@ fun UnsuccessfulPaymentScreen(
                         fontFamily = poppins
                     )
                 }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                OutlinedButton(
+                    onClick = onCancelClick,
+                    modifier = Modifier
+                        .padding(horizontal = 24.dp)
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = Color(0xFF149459)
+                    ),
+                    border = BorderStroke(
+                        width = 1.5.dp,
+                        color = Color(0xFF149459)
+                    )
+                ) {
+                    Text(
+                        text = "Cancel Booking",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        fontFamily = poppins
+                    )
+                }
             }
         }
     }
@@ -155,7 +182,7 @@ fun UnsuccessfulPaymentScreen(
 @Composable
 fun UnsuccessfulPaymentScreenPreview() {
     UnsuccessfulPaymentScreen(
-        onBackClick = {},
-        onTryAgainClick = {}
+        onTryAgainClick = {},
+        onCancelClick = {}
     )
 }

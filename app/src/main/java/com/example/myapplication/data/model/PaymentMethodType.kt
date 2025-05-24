@@ -9,5 +9,6 @@ enum class PaymentMethodType {
     DEBIT_CARD,
     PAYPAL,
     CASH,
-    BANK_TRANSFER
+    BANK_TRANSFER,
+    EDAHABIA
 }

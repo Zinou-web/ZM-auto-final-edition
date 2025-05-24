@@ -29,7 +29,7 @@ import com.example.myapplication.ui.theme.poppins
 
 @Composable
 fun PaymentPending(
-    onBackToMainClick: () -> Unit
+    onBackToHomeClick: () -> Unit
 ) {
     // Calculate top padding based on status bar height
     val topPadding = with(LocalDensity.current) {
@@ -112,7 +112,7 @@ fun PaymentPending(
                 Spacer(modifier = Modifier.height(40.dp))
 
                 Button(
-                    onClick = onBackToMainClick,
+                    onClick = onBackToHomeClick,
                     modifier = Modifier
                         .padding(horizontal = 24.dp)
                         .fillMaxWidth()
@@ -139,6 +139,6 @@ fun PaymentPending(
 @Composable
 fun PaymentPendingPreview() {
     PaymentPending(
-        onBackToMainClick = {}
+        onBackToHomeClick = {}
     )
 }
