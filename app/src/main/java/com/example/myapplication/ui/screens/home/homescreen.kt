@@ -121,7 +121,7 @@ fun HomeScreen(
             else -> { /* Loading state handled in the UI */ }
         }
     }
-    
+
     // Initial load of cars
     LaunchedEffect(Unit) {
         viewModel.applyFilters(null) // Initialize with null filters to load all cars
@@ -198,13 +198,13 @@ fun HomeScreen(
                             imageVector = Icons.Filled.Favorite,
                             contentDescription = "Favorites",
                             tint = Color(0xFF149459),
-                            modifier = Modifier.size(25.dp)
-                        )
-                    }
-                    
+                        modifier = Modifier.size(25.dp)
+                    )
+                }
+
                     // Notification icon
-                    Box(
-                        modifier = Modifier
+                Box(
+                    modifier = Modifier
                             .size(45.dp)
                             .clip(CircleShape)
                             .background(Color(0xFFFFFFFF))
@@ -218,14 +218,14 @@ fun HomeScreen(
                             Text(text = "2")
                         }
                         
-                        Icon(
+                    Icon(
                             painter = painterResource(id = R.drawable.notification_icon),
-                            contentDescription = "Notifications",
+                        contentDescription = "Notifications",
                             modifier = Modifier
                                 .padding(10.dp)
                                 .size(25.dp),
                             tint = Color(0xFF149459)
-                        )
+                    )
                     }
                 }
             }

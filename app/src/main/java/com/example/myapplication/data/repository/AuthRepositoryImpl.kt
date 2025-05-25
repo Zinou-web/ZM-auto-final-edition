@@ -1,11 +1,14 @@
 package com.example.myapplication.data.repository
 
 import android.util.Log
+import com.example.myapplication.BuildConfig
 import com.example.myapplication.data.api.ApiResource
 import com.example.myapplication.data.api.ApiService
 import com.example.myapplication.data.api.ApiStatus
 import com.example.myapplication.data.api.AuthResponse
+import com.example.myapplication.data.api.LoginRequest
 import com.example.myapplication.data.api.PasswordResetResponse
+import com.example.myapplication.data.api.RegisterRequest
 import com.example.myapplication.data.preference.AuthPreferenceManager
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -21,8 +24,8 @@ class AuthRepositoryImpl @Inject constructor(
     private val authPreferenceManager: AuthPreferenceManager
 ) : AuthRepository {
     
-    // Set this to true to use mock data, false to use real backend
-    private val useMockData = true
+    // Use mock data for email/password login when in debug build for testing purposes
+    private val useMockData = BuildConfig.DEBUG
     
     override fun isLoggedIn(): Boolean {
         return authPreferenceManager.getAuthToken() != null
@@ -54,7 +57,8 @@ class AuthRepositoryImpl @Inject constructor(
             } else {
                 // Use the actual API call
                 Log.d("AuthRepository", "Attempting to login with email: $email")
-                val response = apiService.login(email, password)
+                val loginRequest = LoginRequest(email, password)
+                val response = apiService.login(loginRequest)
                 
                 // Store the token
                 authPreferenceManager.saveAuthToken(response.token)
@@ -94,7 +98,8 @@ class AuthRepositoryImpl @Inject constructor(
             } else {
                 // Use the actual API call
                 Log.d("AuthRepository", "Attempting to register user: $email")
-                val response = apiService.register(name, email, password, phone)
+                val registerRequest = RegisterRequest(name, email, password, phone)
+                val response = apiService.register(registerRequest)
                 
                 // Store the token
                 authPreferenceManager.saveAuthToken(response.token)

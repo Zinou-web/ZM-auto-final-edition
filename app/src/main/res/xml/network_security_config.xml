@@ -23,11 +23,16 @@
         <domain includeSubdomains="true">api.your-production-domain.com</domain>
     </domain-config>
     -->
-    
+
     <!-- For development with local server -->
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="true">10.0.2.2</domain>
         <domain includeSubdomains="true">localhost</domain>
         <domain includeSubdomains="true">127.0.0.1</domain>
+    </domain-config>
+
+    <!-- For ngrok API server -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">046e-105-105-223-167.ngrok-free.app</domain>
     </domain-config>
 </network-security-config>

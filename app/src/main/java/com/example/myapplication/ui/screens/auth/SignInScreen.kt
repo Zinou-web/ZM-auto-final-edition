@@ -1,8 +1,10 @@
 package com.example.myapplication.ui.screens.auth
 
+import android.content.Context
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.launch
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -12,6 +14,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
@@ -35,14 +38,17 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.myapplication.R
 import com.example.myapplication.ui.theme.MyApplicationTheme
 import com.example.myapplication.ui.theme.poppins
 import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.example.myapplication.ui.viewmodel.SocialLoginViewModel
+import com.example.myapplication.ui.viewmodel.SocialLoginUiState
+import androidx.activity.ComponentActivity
 
 private const val TAG = "SignInScreen"
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SignInScreen(
     onNavigateToRegister: () -> Unit = {},
@@ -50,18 +56,34 @@ fun SignInScreen(
     onSignInSuccess: () -> Unit = {
         android.util.Log.d(TAG, "onSignInSuccess callback triggered, but default implementation does nothing")
     },
-    viewModel: AuthViewModel = hiltViewModel()
+    onNavigateToGoogleTest: () -> Unit = {},
+    socialViewModel: SocialLoginViewModel = hiltViewModel()
 ) {
+    android.util.Log.d(TAG, "SignInScreen composable is being entered")
+    
     val context = LocalContext.current
-    val uiState by viewModel.uiState.collectAsState()
+    val activity = context as? ComponentActivity
+    
+    if (activity == null) {
+        android.util.Log.e(TAG, "Activity is null - cannot initialize GoogleAuthManager")
+        LaunchedEffect(Unit) {
+            Toast.makeText(context, "Error initializing authentication. Please restart the app.", Toast.LENGTH_LONG).show()
+        }
+    } else {
+        android.util.Log.d(TAG, "Activity is available: ${activity.javaClass.simpleName}")
+    }
+    
+    val socialLoginState by socialViewModel.loginState.collectAsStateWithLifecycle()
     var email by remember { mutableStateOf("test@example.com") }
     var password by remember { mutableStateOf("password") }
     var passwordVisible by remember { mutableStateOf(false) }
     var rememberMe by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
     
     // Error state variables
     var emailError by remember { mutableStateOf<String?>(null) }
     var passwordError by remember { mutableStateOf<String?>(null) }
+    var googleSignInError by remember { mutableStateOf<String?>(null) }
     
     // Validation functions
     fun validateEmail(): Boolean {
@@ -96,39 +118,85 @@ fun SignInScreen(
         val passwordValid = validatePassword()
         return emailValid && passwordValid
     }
-
-    // Google login launcher
+    
+    // Launcher for Google Sign-In
     val googleLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        if (result.resultCode == android.app.Activity.RESULT_OK) {
+        socialViewModel.handleGoogleSignInResult(result.data)
+    }
+
+    // Initialize Google Sign-In state
+    var isGoogleInitialized by remember { mutableStateOf(false) }
+    var initializationAttempted by remember { mutableStateOf(false) }
+
+    // Check if Google is initialized on composition
+    LaunchedEffect(Unit) {
+        isGoogleInitialized = socialViewModel.isGoogleSignInInitialized()
+        if (!isGoogleInitialized && activity != null) {
             try {
-                val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
-                viewModel.handleGoogleActivityResult(task)
+                android.util.Log.d(TAG, "Attempting to initialize Google Sign-In from SignInScreen")
+                val webClientId = context.getString(R.string.default_web_client_id)
+                if (webClientId.isNotEmpty()) {
+                    // Try to initialize with the activity
+                    isGoogleInitialized = socialViewModel.initializeGoogleSignIn(webClientId)
+                    if (isGoogleInitialized) {
+                        googleSignInError = null
+                    } else {
+                        googleSignInError = "Failed to initialize Google Sign-In. Tap the Google button to retry."
+                    }
+                }
             } catch (e: Exception) {
-                Toast.makeText(context, "Google Sign In failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                android.util.Log.e(TAG, "Error initializing Google Sign-In: ${e.message}")
+                googleSignInError = "Failed to initialize Google Sign-In: ${e.message?.take(50)}"
+            }
+        }
+        initializationAttempted = true
+    }
+    
+    // Handle social login state changes
+    LaunchedEffect(socialLoginState) {
+        when (socialLoginState) {
+            is SocialLoginUiState.Success -> {
+                isLoading = false
+                onSignInSuccess()
+                socialViewModel.resetState()
+            }
+            is SocialLoginUiState.Error -> {
+                isLoading = false
+                val errorMessage = (socialLoginState as SocialLoginUiState.Error).message
+                Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
+                
+                // Set Google initialization error if it's related to Google Sign-In
+                if (errorMessage.contains("Google") || errorMessage.contains("sign-in")) {
+                    googleSignInError = errorMessage
+                }
+            }
+            is SocialLoginUiState.Loading -> {
+                isLoading = true
+            }
+            else -> {
+                // No action needed
             }
         }
     }
 
-    LaunchedEffect(uiState) {
-        android.util.Log.d(TAG, "LaunchedEffect triggered with uiState: $uiState")
-        when (uiState) {
-            is AuthUiState.Success -> {
-                android.util.Log.d(TAG, "Auth successful! Calling onSignInSuccess navigation callback")
-                onSignInSuccess()
-                android.util.Log.d(TAG, "onSignInSuccess navigation callback completed")
-            }
-            is AuthUiState.Error -> {
-                val errorMsg = (uiState as AuthUiState.Error).message
-                android.util.Log.e(TAG, "Auth error: $errorMsg")
-                Toast.makeText(context, errorMsg, Toast.LENGTH_SHORT).show()
-            }
-            is AuthUiState.Loading -> {
-                android.util.Log.d(TAG, "Auth state: Loading")
-            }
-            else -> {
-                android.util.Log.d(TAG, "Auth state: ${uiState::class.java.simpleName}")
+    // Try direct initialization on screen visibility
+    LaunchedEffect(activity) {
+        activity?.let { act ->
+            try {
+                android.util.Log.d(TAG, "Attempting direct initialization on screen visibility")
+                isGoogleInitialized = socialViewModel.ensureDirectInitialization(act)
+                if (isGoogleInitialized) {
+                    android.util.Log.d(TAG, "Direct initialization successful")
+                    googleSignInError = null
+                } else {
+                    android.util.Log.d(TAG, "Direct initialization failed, will try again on button click")
+                    googleSignInError = "Google Sign-In not initialized. Click Google button to retry."
+                }
+            } catch (e: Exception) {
+                android.util.Log.e(TAG, "Error in direct initialization: ${e.message}")
+                googleSignInError = "Error initializing Google Sign-In: ${e.message?.take(50)}"
             }
         }
     }
@@ -183,10 +251,11 @@ fun SignInScreen(
                     .height(50.dp)
                     .background(Color.White, RoundedCornerShape(14.dp)),
                 shape = RoundedCornerShape(14.dp),
-                colors = TextFieldDefaults.outlinedTextFieldColors(
+                colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Color(0xFFD9D9D9),
                     unfocusedBorderColor = Color(0xFFD9D9D9),
-                    containerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    focusedContainerColor = Color.White,
                     errorBorderColor = Color.Red
                 ),
                 keyboardOptions = KeyboardOptions(
@@ -247,10 +316,11 @@ fun SignInScreen(
                     .height(50.dp)
                     .background(Color.White, RoundedCornerShape(14.dp)),
                 shape = RoundedCornerShape(14.dp),
-                colors = TextFieldDefaults.outlinedTextFieldColors(
+                colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Color(0xFFD9D9D9),
                     unfocusedBorderColor = Color(0xFFD9D9D9),
-                    containerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    focusedContainerColor = Color.White,
                     errorBorderColor = Color.Red
                 ),
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -333,14 +403,43 @@ fun SignInScreen(
             
             Spacer(modifier = Modifier.height(24.dp))
             
+            // Show Google Sign-In error if any
+            if (googleSignInError != null) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFFFFECEC), RoundedCornerShape(8.dp))
+                        .padding(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = "Error",
+                        tint = Color.Red,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = googleSignInError ?: "",
+                        color = Color.Red,
+                        fontFamily = poppins,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 12.sp,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+            
             // Sign In Button
             Button(
                 onClick = {
                     if (validateForm()) {
-                        viewModel.login(email, password)
+                        socialViewModel.loginWithEmail(email, password)
                     }
                 },
-                enabled = uiState !is AuthUiState.Loading,
+                enabled = !isLoading && email.isNotBlank() && password.isNotBlank(),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(60.dp)
@@ -351,7 +450,7 @@ fun SignInScreen(
                     contentColor = Color.White
                 )
             ) {
-                if (uiState is AuthUiState.Loading) {
+                if (isLoading) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
                         color = Color.White,
@@ -427,8 +526,18 @@ fun SignInScreen(
                         .clip(CircleShape)
                         .background(Color.White)
                         .border(1.dp, Color(0xFFD9D9D9), CircleShape)
-                        .clickable { 
-                            viewModel.loginWithGoogle(googleLauncher)
+                        .clickable {
+                            googleSignInError = null
+                            if (isGoogleInitialized) {
+                                val intent = socialViewModel.getSignInIntent()
+                                if (intent != null) {
+                                    googleLauncher.launch(intent)
+                                } else {
+                                    googleSignInError = "Failed to create sign-in intent"
+                                }
+                            } else {
+                                googleSignInError = "Google Sign-In not initialized. Please restart the app."
+                            }
                         },
                     contentAlignment = Alignment.Center
                 ) {
@@ -472,7 +581,7 @@ fun SignInScreen(
         }
         
         // Loading overlay
-        if (uiState is AuthUiState.Loading) {
+        if (isLoading) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()

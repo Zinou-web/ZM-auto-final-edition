@@ -2,9 +2,15 @@ package com.example.myapplication.navigation
 
 import android.content.Context
 import android.util.Log
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -51,7 +57,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.data.preference.AuthPreferenceManager
 import com.example.myapplication.ui.screens.home.BookingViewModel
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.myapplication.ui.screens.auth.GoogleSignInTest
 import com.example.myapplication.ui.screens.home.FavoritesScreen
+import androidx.activity.ComponentActivity
 
 /**
  * Enum class that contains all the possible screens in our app
@@ -74,6 +82,7 @@ enum class AppScreen {
     NewPassword,
     CompleteProfile,
     OTPVerification,
+    GoogleSignInTest,
     
     // Main Screens
     Home,
@@ -179,21 +188,56 @@ fun NavGraph(
                 onBackClick = { navController.popBackStack() },
                 onNextClick = { 
                     Log.d("Navigation", "ThirdScreen: Next button clicked, navigating to SignIn")
-                    navController.navigate(AppScreen.SignIn.name) {
-                        // Clear back stack up to Third screen
-                        popUpTo(AppScreen.Third.name) { inclusive = true }
-                    }
+                    // Simple navigation without popUpTo
+                    navController.navigate(AppScreen.SignIn.name)
+                    Log.d("Navigation", "Navigation to SignIn completed")
                 }
             )
         }
 
         // Authentication Screens
         composable(AppScreen.SignIn.name) {
-            SignInScreen(
-                onNavigateToRegister = { navController.navigate(AppScreen.CreateAccount.name) },
-                onNavigateToForgotPassword = { navController.navigate(AppScreen.ForgotPassword.name) },
-                onSignInSuccess = { navController.navigateAndClear(AppScreen.Home.name) }
-            )
+            Log.d("Navigation", "Entering SignIn composable")
+            
+            // Create an activity-specific check
+            val activity = LocalContext.current as? ComponentActivity
+            if (activity == null) {
+                Log.e("Navigation", "Activity is null in SignIn screen - cannot proceed")
+                // Show error text instead of SignInScreen
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Text(
+                        text = "Error initializing authentication. Please restart the app.",
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+            } else {
+                Log.d("Navigation", "Activity is available: ${activity.javaClass.simpleName}")
+                
+                SignInScreen(
+                    onNavigateToRegister = { 
+                        Log.d("Navigation", "SignIn: Navigating to Register")
+                        navController.navigate(AppScreen.CreateAccount.name) 
+                    },
+                    onNavigateToForgotPassword = { 
+                        Log.d("Navigation", "SignIn: Navigating to Forgot Password") 
+                        navController.navigate(AppScreen.ForgotPassword.name) 
+                    },
+                    onSignInSuccess = { 
+                        Log.d("Navigation", "SignIn: Sign in successful, navigating to Home")
+                        navController.navigateAndClear(AppScreen.Home.name) 
+                    },
+                    onNavigateToGoogleTest = { 
+                        Log.d("Navigation", "SignIn: Navigating to Google Test")
+                        navController.navigate(AppScreen.GoogleSignInTest.name) 
+                    }
+                )
+                Log.d("Navigation", "SignInScreen composable completed")
+            }
+        }
+
+        // Google Sign-In Test Screen (for debugging)
+        composable(AppScreen.GoogleSignInTest.name) {
+            GoogleSignInTest()
         }
 
         composable(AppScreen.CreateAccount.name) {

@@ -11,4 +11,22 @@ data class AuthResponse(
     val name: String? = null,
     val success: Boolean = true,
     val message: String? = null
+)
+
+/**
+ * Data class for login request payload
+ */
+data class LoginRequest(
+    val email: String,
+    val password: String
+)
+
+/**
+ * Data class for registration request payload
+ */
+data class RegisterRequest(
+    val name: String,
+    val email: String,
+    val password: String,
+    val phone: String
 ) 

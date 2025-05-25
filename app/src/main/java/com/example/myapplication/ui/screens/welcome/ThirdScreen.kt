@@ -1,4 +1,6 @@
 package com.example.myapplication.ui.screens.welcome
+import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -9,11 +11,13 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -23,11 +27,24 @@ import androidx.compose.ui.unit.sp
 import com.example.myapplication.R
 import com.example.myapplication.ui.theme.*
 
+private const val TAG = "ThirdScreen"
+
 @Composable
 fun ThirdScreen(
     onBackClick: () -> Unit = {},
     onNextClick: () -> Unit = {}
 ) {
+    // Add logging when ThirdScreen is composed
+    Log.d(TAG, "ThirdScreen is being composed")
+    
+    // Get the context for showing toasts
+    val context = LocalContext.current
+    
+    // Add a LaunchedEffect for logging when the screen is first displayed
+    LaunchedEffect(Unit) {
+        Log.d(TAG, "ThirdScreen LaunchedEffect triggered")
+    }
+    
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -54,7 +71,17 @@ fun ThirdScreen(
         ) {
             WelcomeTexts()
             Spacer(modifier = Modifier.height(40.dp))
-            BottomSection(onBackClick, onNextClick)
+            BottomSection(
+                onBackClick = {
+                    Log.d(TAG, "Back button clicked")
+                    onBackClick()
+                },
+                onNextClick = {
+                    Log.d(TAG, "Next button clicked - proceeding to SignInScreen")
+                    onNextClick()
+                    Log.d(TAG, "Navigation request sent successfully")
+                }
+            )
         }
     }
 }

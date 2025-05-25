@@ -10,23 +10,23 @@ import retrofit2.http.*
 
 interface ApiService {
     // User Profile
-    @GET("users/{id}")
+    @GET("api/users/{id}")
     suspend fun getUserById(@Path("id") id: Long, @Header("Authorization") token: String): User
 
-    @GET("users/me")
+    @GET("api/users/me")
     suspend fun getCurrentUser(@Header("Authorization") token: String): User
 
     // Facebook OAuth
-    @GET("users/oauth2/redirect")
+    @GET("api/users/oauth2/redirect")
     suspend fun handleOAuth2Redirect(
         @Query("token") token: String, 
         @Query("userId") userId: Long
     ): AuthResponse
 
-    @GET("users/oauth2/check-email")
+    @GET("api/users/oauth2/check-email")
     suspend fun checkEmailExists(@Query("email") email: String): Map<String, Boolean>
 
-    @PUT("users/{id}")
+    @PUT("api/users/{id}")
     suspend fun updateUserProfile(
         @Path("id") id: Long,
         @Body request: UpdateProfileRequest,
@@ -34,45 +34,37 @@ interface ApiService {
     ): User
 
     // Authentication
-    @POST("users/login")
-    suspend fun login(
-        @Query("email") email: String,
-        @Query("password") password: String
-    ): AuthResponse
+    @POST("api/users/login")
+    suspend fun login(@Body request: LoginRequest): AuthResponse
 
-    @POST("users/register")
-    suspend fun register(
-        @Query("name") name: String,
-        @Query("email") email: String,
-        @Query("password") password: String,
-        @Query("phone") phone: String
-    ): AuthResponse
+    @POST("api/users/register")
+    suspend fun register(@Body request: RegisterRequest): AuthResponse
 
-    @POST("users/{userId}/verify-email")
+    @POST("api/users/{userId}/verify-email")
     suspend fun verifyEmail(
         @Path("userId") userId: Long,
         @Query("code") code: String,
         @Header("Authorization") token: String
     ): String
 
-    @POST("users/password-reset/request")
+    @POST("api/users/password-reset/request")
     suspend fun requestPasswordReset(@Query("email") email: String)
 
-    @POST("users/password-reset/verify")
+    @POST("api/users/password-reset/verify")
     suspend fun verifyPasswordReset(
         @Query("email") email: String,
         @Query("code") code: String,
         @Query("newPassword") newPassword: String
     ): PasswordResetResponse
 
-    @POST("users/me/change-password")
+    @POST("api/users/me/change-password")
     suspend fun changePassword(
         @Query("currentPassword") currentPassword: String,
         @Query("newPassword") newPassword: String,
         @Header("Authorization") token: String
     )
 
-    @DELETE("users/{id}")
+    @DELETE("api/users/{id}")
     suspend fun deleteAccount(
         @Path("id") id: Long,
         @Header("Authorization") token: String
@@ -80,17 +72,17 @@ interface ApiService {
 
     // Profile Management
     @Multipart
-    @POST("users/me/avatar")
+    @POST("api/users/me/avatar")
     suspend fun uploadProfileImage(
         @Part image: MultipartBody.Part,
         @Header("Authorization") token: String
     ): ImageUploadResponse
 
     // Car Management
-    @GET("cars")
+    @GET("api/cars")
     suspend fun getAllCars(): List<Car>
 
-    @GET("cars/paged")
+    @GET("api/cars/paged")
     suspend fun getAllCarsPaged(
         @Query("page") page: Int = 0,
         @Query("size") size: Int = 10,
@@ -103,14 +95,14 @@ interface ApiService {
         @Query("rentalStatus") rentalStatus: String? = null
     ): PagedResponse<Car>
 
-    @GET("cars/available/paged")
+    @GET("api/cars/available/paged")
     suspend fun getAvailableCarsPaged(
         @Query("page") page: Int = 0,
         @Query("size") size: Int = 10,
         @Query("sort") sort: String = "id"
     ): PagedResponse<Car>
 
-    @GET("cars/brand/{brand}/paged")
+    @GET("api/cars/brand/{brand}/paged")
     suspend fun getCarsByBrandPaged(
         @Path("brand") brand: String,
         @Query("page") page: Int = 0,
@@ -118,7 +110,7 @@ interface ApiService {
         @Query("sort") sort: String = "id"
     ): PagedResponse<Car>
 
-    @GET("cars/model/{model}/paged")
+    @GET("api/cars/model/{model}/paged")
     suspend fun getCarsByModelPaged(
         @Path("model") model: String,
         @Query("page") page: Int = 0,
@@ -126,7 +118,7 @@ interface ApiService {
         @Query("sort") sort: String = "id"
     ): PagedResponse<Car>
 
-    @GET("cars/rating/paged")
+    @GET("api/cars/rating/paged")
     suspend fun getCarsByRatingRangePaged(
         @Query("minRating") minRating: Long,
         @Query("maxRating") maxRating: Long,
@@ -135,7 +127,7 @@ interface ApiService {
         @Query("sort") sort: String = "id"
     ): PagedResponse<Car>
 
-    @GET("cars/{id}")
+    @GET("api/cars/{id}")
     suspend fun getCarById(@Path("id") id: Long): Car
 
     // User Car Browsing
@@ -162,86 +154,80 @@ interface ApiService {
     ): List<Car>
 
     // Reservation Management
-    @GET("reservations")
+    @GET("api/reservations")
     suspend fun getAllReservations(@Header("Authorization") token: String): List<Reservation>
 
-    @GET("reservations/{id}")
+    @GET("api/reservations/{id}")
     suspend fun getReservationById(
         @Path("id") id: Long,
         @Header("Authorization") token: String
     ): Reservation
 
-    @GET("reservations/user/{userId}")
+    @GET("api/reservations/user/{userId}")
     suspend fun getReservationsByUserId(
         @Path("userId") userId: Long,
         @Header("Authorization") token: String
     ): List<Reservation>
 
-    @GET("reservations/car/{carId}")
+    @GET("api/reservations/car/{carId}")
     suspend fun getReservationsByCarId(
         @Path("carId") carId: Long,
         @Header("Authorization") token: String
     ): List<Reservation>
 
-    @GET("reservations/status/{status}")
+    @GET("api/reservations/status/{status}")
     suspend fun getReservationsByStatus(
         @Path("status") status: String,
         @Header("Authorization") token: String
     ): List<Reservation>
 
-    @POST("reservations")
+    @POST("api/reservations")
     suspend fun createReservation(
-        @Body reservation: Reservation,
+        @Body reservation: ReservationRequest,
         @Header("Authorization") token: String
     ): Reservation
 
-    @PUT("reservations/{id}")
+    @PUT("api/reservations/{id}")
     suspend fun updateReservation(
         @Path("id") id: Long,
-        @Body reservation: Reservation,
+        @Body reservation: ReservationRequest,
         @Header("Authorization") token: String
     ): Reservation
 
-    @PATCH("reservations/{id}/status")
+    @PATCH("api/reservations/{id}/status")
     suspend fun updateReservationStatus(
         @Path("id") id: Long,
-        @Body status: String,
+        @Body statusUpdate: ReservationStatusUpdateRequest,
         @Header("Authorization") token: String
     ): Reservation
 
-    @POST("users/reservations")
-    suspend fun createUserReservation(
-        @Body reservation: Reservation,
-        @Header("Authorization") token: String
-    ): Reservation
-
-    @POST("users/reservations/{id}/cancel")
+    @POST("api/reservations/{id}/cancel")
     suspend fun cancelReservation(
         @Path("id") id: Long,
         @Header("Authorization") token: String
     ): Reservation
 
-    @GET("users/{userId}/reservations/upcoming")
+    @GET("api/users/{userId}/reservations/upcoming")
     suspend fun getUpcomingReservations(
         @Path("userId") userId: Long,
         @Header("Authorization") token: String
     ): List<Reservation>
 
-    @GET("users/{userId}/reservations/past")
+    @GET("api/users/{userId}/reservations/past")
     suspend fun getPastReservations(
         @Path("userId") userId: Long,
         @Header("Authorization") token: String
     ): List<Reservation>
 
     // Address Management
-    @PUT("users/{id}/address")
+    @PUT("api/users/{id}/address")
     suspend fun updateAddress(
         @Path("id") id: Long,
         @Body address: Address,
         @Header("Authorization") token: String
     ): Address
 
-    @GET("users/{id}/address")
+    @GET("api/users/{id}/address")
     suspend fun getAddress(
         @Path("id") id: Long,
         @Header("Authorization") token: String

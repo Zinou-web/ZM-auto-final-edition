@@ -16,9 +16,12 @@ class RetrofitClient @Inject constructor(
         .setLenient()
         .create()
 
+    // Base API URL for the Spring Boot backend
+    private val BASE_URL = "https://046e-105-105-223-167.ngrok-free.app/"
+
     private val retrofit by lazy {
         Retrofit.Builder()
-            .baseUrl(BuildConfig.API_BASE_URL)
+            .baseUrl(BASE_URL)
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create(gson))
             .build()

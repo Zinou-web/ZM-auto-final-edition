@@ -4,6 +4,8 @@ import android.util.Log
 import com.example.myapplication.data.api.ApiResource
 import com.example.myapplication.data.api.ApiService
 import com.example.myapplication.data.api.ApiStatus
+import com.example.myapplication.data.api.ReservationRequest
+import com.example.myapplication.data.api.ReservationStatusUpdateRequest
 import com.example.myapplication.data.model.Car
 import com.example.myapplication.data.model.Reservation
 import com.example.myapplication.data.preference.AuthPreferenceManager
@@ -26,6 +28,7 @@ class ReservationRepositoryImpl @Inject constructor(
     // Local cache for reservations when API is not available
     private val cachedReservations = mutableListOf<Reservation>()
     private var nextReservationId = 1000L
+    private val useMockData = false
 
     init {
         // Add some sample reservations for testing
@@ -72,96 +75,108 @@ class ReservationRepositoryImpl @Inject constructor(
         )
     }
 
+    /**
+     * Helper function to get the auth header
+     */
+    private fun getAuthHeader(): String {
+        return "Bearer ${authPreferenceManager.getAuthToken()}"
+    }
+    
+    /**
+     * Helper function to get the current user ID
+     */
+    private fun getCurrentUserId(): Long {
+        return authPreferenceManager.getUserId()?.toLong() ?: 0
+    }
+
     override fun getAllReservations(): Flow<ApiResource<List<Reservation>>> = flow {
         emit(ApiResource(status = ApiStatus.LOADING))
         try {
-            val token = authPreferenceManager.getAuthToken() ?: throw IllegalStateException("Not authenticated")
-            try {
-            val reservations = apiService.getAllReservations("Bearer $token")
-            emit(ApiResource(status = ApiStatus.SUCCESS, data = reservations))
-            } catch (e: Exception) {
-                // Fallback to cached reservations if API call fails
-                Log.e("ReservationRepo", "API call failed, using cached data", e)
-                emit(ApiResource(status = ApiStatus.SUCCESS, data = cachedReservations))
+            if (useMockData) {
+                // Mock implementation
+                kotlinx.coroutines.delay(1000)
+                emit(ApiResource(status = ApiStatus.SUCCESS, data = emptyList()))
+            } else {
+                val token = getAuthHeader()
+                val reservations = apiService.getAllReservations(token)
+                emit(ApiResource(status = ApiStatus.SUCCESS, data = reservations))
             }
         } catch (e: Exception) {
-            emit(ApiResource(status = ApiStatus.ERROR, message = e.message ?: "Failed to load reservations"))
+            Log.e("ReservationRepo", "Error getting all reservations: ${e.message}", e)
+            emit(ApiResource(status = ApiStatus.ERROR, message = e.message ?: "Failed to get reservations"))
         }
     }
 
     override fun getReservationById(id: Long): Flow<ApiResource<Reservation>> = flow {
         emit(ApiResource(status = ApiStatus.LOADING))
         try {
-            val token = authPreferenceManager.getAuthToken() ?: throw IllegalStateException("Not authenticated")
-            try {
-            val reservation = apiService.getReservationById(id, "Bearer $token")
-            emit(ApiResource(status = ApiStatus.SUCCESS, data = reservation))
-            } catch (e: Exception) {
-                // Fallback to cached reservation if API call fails
-                Log.e("ReservationRepo", "API call failed, using cached data", e)
-                val cachedReservation = cachedReservations.find { it.id == id }
-                if (cachedReservation != null) {
-                    emit(ApiResource(status = ApiStatus.SUCCESS, data = cachedReservation))
-                } else {
-                    emit(ApiResource(status = ApiStatus.ERROR, message = "Reservation not found"))
-                }
+            if (useMockData) {
+                // Mock implementation
+                kotlinx.coroutines.delay(500)
+                emit(ApiResource(status = ApiStatus.ERROR, message = "Reservation not found"))
+            } else {
+                val token = getAuthHeader()
+                val reservation = apiService.getReservationById(id, token)
+                emit(ApiResource(status = ApiStatus.SUCCESS, data = reservation))
             }
         } catch (e: Exception) {
-            emit(ApiResource(status = ApiStatus.ERROR, message = e.message ?: "Failed to load reservation details"))
+            Log.e("ReservationRepo", "Error getting reservation $id: ${e.message}", e)
+            emit(ApiResource(status = ApiStatus.ERROR, message = e.message ?: "Failed to get reservation"))
         }
     }
 
     override fun getUserReservations(): Flow<ApiResource<List<Reservation>>> = flow {
         emit(ApiResource(status = ApiStatus.LOADING))
         try {
-            val token = authPreferenceManager.getAuthToken() ?: throw IllegalStateException("Not authenticated")
-            val userId = authPreferenceManager.getUserId()?.toLongOrNull() ?: throw IllegalStateException("User ID not found")
-            try {
-            val reservations = apiService.getReservationsByUserId(userId, "Bearer $token")
-            emit(ApiResource(status = ApiStatus.SUCCESS, data = reservations))
-            } catch (e: Exception) {
-                // Fallback to cached reservations if API call fails
-                Log.e("ReservationRepo", "API call failed, using cached data", e)
-                emit(ApiResource(status = ApiStatus.SUCCESS, data = cachedReservations))
+            if (useMockData) {
+                // Mock implementation
+                kotlinx.coroutines.delay(1000)
+                emit(ApiResource(status = ApiStatus.SUCCESS, data = emptyList()))
+            } else {
+                val token = getAuthHeader()
+                val userId = getCurrentUserId()
+                val reservations = apiService.getReservationsByUserId(userId, token)
+                emit(ApiResource(status = ApiStatus.SUCCESS, data = reservations))
             }
         } catch (e: Exception) {
-            emit(ApiResource(status = ApiStatus.ERROR, message = e.message ?: "Failed to load user reservations"))
+            Log.e("ReservationRepo", "Error getting user reservations: ${e.message}", e)
+            emit(ApiResource(status = ApiStatus.ERROR, message = e.message ?: "Failed to get user reservations"))
         }
     }
 
     override fun getReservationsByCarId(carId: Long): Flow<ApiResource<List<Reservation>>> = flow {
         emit(ApiResource(status = ApiStatus.LOADING))
         try {
-            val token = authPreferenceManager.getAuthToken() ?: throw IllegalStateException("Not authenticated")
-            try {
-            val reservations = apiService.getReservationsByCarId(carId, "Bearer $token")
-            emit(ApiResource(status = ApiStatus.SUCCESS, data = reservations))
-            } catch (e: Exception) {
-                // Fallback to cached reservations if API call fails
-                Log.e("ReservationRepo", "API call failed, using cached data", e)
-                val filtered = cachedReservations.filter { it.carId == carId }
-                emit(ApiResource(status = ApiStatus.SUCCESS, data = filtered))
+            if (useMockData) {
+                // Mock implementation
+                kotlinx.coroutines.delay(1000)
+                emit(ApiResource(status = ApiStatus.SUCCESS, data = emptyList()))
+            } else {
+                val token = getAuthHeader()
+                val reservations = apiService.getReservationsByCarId(carId, token)
+                emit(ApiResource(status = ApiStatus.SUCCESS, data = reservations))
             }
         } catch (e: Exception) {
-            emit(ApiResource(status = ApiStatus.ERROR, message = e.message ?: "Failed to load car reservations"))
+            Log.e("ReservationRepo", "Error getting reservations for car $carId: ${e.message}", e)
+            emit(ApiResource(status = ApiStatus.ERROR, message = e.message ?: "Failed to get reservations"))
         }
     }
 
     override fun getReservationsByStatus(status: String): Flow<ApiResource<List<Reservation>>> = flow {
         emit(ApiResource(status = ApiStatus.LOADING))
         try {
-            val token = authPreferenceManager.getAuthToken() ?: throw IllegalStateException("Not authenticated")
-            try {
-            val reservations = apiService.getReservationsByStatus(status, "Bearer $token")
-            emit(ApiResource(status = ApiStatus.SUCCESS, data = reservations))
-            } catch (e: Exception) {
-                // Fallback to cached reservations if API call fails
-                Log.e("ReservationRepo", "API call failed, using cached data", e)
-                val filtered = cachedReservations.filter { it.status == status }
-                emit(ApiResource(status = ApiStatus.SUCCESS, data = filtered))
+            if (useMockData) {
+                // Mock implementation
+                kotlinx.coroutines.delay(1000)
+                emit(ApiResource(status = ApiStatus.SUCCESS, data = emptyList()))
+            } else {
+                val token = getAuthHeader()
+                val reservations = apiService.getReservationsByStatus(status, token)
+                emit(ApiResource(status = ApiStatus.SUCCESS, data = reservations))
             }
         } catch (e: Exception) {
-            emit(ApiResource(status = ApiStatus.ERROR, message = e.message ?: "Failed to load reservations by status"))
+            Log.e("ReservationRepo", "Error getting reservations with status $status: ${e.message}", e)
+            emit(ApiResource(status = ApiStatus.ERROR, message = e.message ?: "Failed to get reservations"))
         }
     }
 
@@ -173,56 +188,34 @@ class ReservationRepositoryImpl @Inject constructor(
     ): Flow<ApiResource<Reservation>> = flow {
         emit(ApiResource(status = ApiStatus.LOADING))
         try {
-            val token = authPreferenceManager.getAuthToken() ?: throw IllegalStateException("Not authenticated")
-            val userId = authPreferenceManager.getUserId()?.toLongOrNull() ?: throw IllegalStateException("User ID not found")
-            
-            // Create a reservation object
-            val reservation = Reservation(
-                id = 0L, // Will be set by server
-                userId = userId,
-                carId = carId,
-                startDate = startDate,
-                endDate = endDate,
-                totalPrice = totalPrice,
-                status = "PENDING",
-                paymentStatus = "UNPAID"
-            )
-            
-            try {
-            val createdReservation = apiService.createUserReservation(reservation, "Bearer $token")
-                
-                // Add to cache
-                cachedReservations.add(createdReservation)
-                
-            emit(ApiResource(status = ApiStatus.SUCCESS, data = createdReservation))
-            } catch (e: Exception) {
-                // Create a local reservation if the API call fails
-                Log.e("ReservationRepo", "API call failed, creating local reservation", e)
-                val localReservation = reservation.copy(
-                    id = nextReservationId++,
-                    createdAt = LocalDateTime.now()
+            if (useMockData) {
+                // Mock implementation
+                kotlinx.coroutines.delay(1500)
+                val mockReservation = Reservation(
+                    id = 1,
+                    userId = getCurrentUserId(),
+                    carId = carId,
+                    startDate = startDate,
+                    endDate = endDate,
+                    status = "PENDING",
+                    totalPrice = totalPrice
                 )
-                
-                // Get car details for the reservation (mock data for demo)
-                val mockCar = Car(
-                    id = carId,
-                    brand = "Toyota",
-                    model = "Corolla",
-                    year = 2023,
-                    transmission = "Automatic",
-                    rentalPricePerDay = java.math.BigDecimal(totalPrice / (endDate.toEpochDay() - startDate.toEpochDay() + 1)),
-                    rating = 4
+                emit(ApiResource(status = ApiStatus.SUCCESS, data = mockReservation))
+            } else {
+                val token = getAuthHeader()
+                val userId = getCurrentUserId()
+                val request = ReservationRequest(
+                    userId = userId,
+                    carId = carId,
+                    startDate = startDate,
+                    endDate = endDate,
+                    totalPrice = totalPrice
                 )
-                
-                // Add car details to the reservation
-                val reservationWithCar = localReservation.copy(car = mockCar)
-                
-                // Add to cache
-                cachedReservations.add(reservationWithCar)
-                
-                emit(ApiResource(status = ApiStatus.SUCCESS, data = reservationWithCar))
+                val reservation = apiService.createReservation(request, token)
+                emit(ApiResource(status = ApiStatus.SUCCESS, data = reservation))
             }
         } catch (e: Exception) {
+            Log.e("ReservationRepo", "Error creating reservation: ${e.message}", e)
             emit(ApiResource(status = ApiStatus.ERROR, message = e.message ?: "Failed to create reservation"))
         }
     }
@@ -235,46 +228,34 @@ class ReservationRepositoryImpl @Inject constructor(
     ): Flow<ApiResource<Reservation>> = flow {
         emit(ApiResource(status = ApiStatus.LOADING))
         try {
-            val token = authPreferenceManager.getAuthToken() ?: throw IllegalStateException("Not authenticated")
-            
-            try {
-            // First get the existing reservation
-            val existingReservation = apiService.getReservationById(reservationId, "Bearer $token")
-            
-            // Update the reservation
-            val updatedReservation = existingReservation.copy(
-                startDate = startDate,
-                endDate = endDate,
-                totalPrice = totalPrice
-            )
-            
-            val result = apiService.updateReservation(reservationId, updatedReservation, "Bearer $token")
-                
-                // Update in cache
-                val index = cachedReservations.indexOfFirst { it.id == reservationId }
-                if (index >= 0) {
-                    cachedReservations[index] = result
-                }
-                
-            emit(ApiResource(status = ApiStatus.SUCCESS, data = result))
-            } catch (e: Exception) {
-                // Update local reservation if API call fails
-                Log.e("ReservationRepo", "API call failed, updating local reservation", e)
-                
-                val index = cachedReservations.indexOfFirst { it.id == reservationId }
-                if (index >= 0) {
-                    val updatedReservation = cachedReservations[index].copy(
-                        startDate = startDate,
-                        endDate = endDate,
-                        totalPrice = totalPrice
-                    )
-                    cachedReservations[index] = updatedReservation
-                    emit(ApiResource(status = ApiStatus.SUCCESS, data = updatedReservation))
-                } else {
-                    emit(ApiResource(status = ApiStatus.ERROR, message = "Reservation not found"))
-                }
+            if (useMockData) {
+                // Mock implementation
+                kotlinx.coroutines.delay(1000)
+                val mockReservation = Reservation(
+                    id = reservationId,
+                    userId = getCurrentUserId(),
+                    carId = 1,
+                    startDate = startDate,
+                    endDate = endDate,
+                    status = "PENDING",
+                    totalPrice = totalPrice
+                )
+                emit(ApiResource(status = ApiStatus.SUCCESS, data = mockReservation))
+            } else {
+                val token = getAuthHeader()
+                val userId = getCurrentUserId()
+                val request = ReservationRequest(
+                    userId = userId,
+                    carId = 0, // This will be ignored by the backend for updates
+                    startDate = startDate,
+                    endDate = endDate,
+                    totalPrice = totalPrice
+                )
+                val reservation = apiService.updateReservation(reservationId, request, token)
+                emit(ApiResource(status = ApiStatus.SUCCESS, data = reservation))
             }
         } catch (e: Exception) {
+            Log.e("ReservationRepo", "Error updating reservation $reservationId: ${e.message}", e)
             emit(ApiResource(status = ApiStatus.ERROR, message = e.message ?: "Failed to update reservation"))
         }
     }
@@ -285,32 +266,23 @@ class ReservationRepositoryImpl @Inject constructor(
     ): Flow<ApiResource<Reservation>> = flow {
         emit(ApiResource(status = ApiStatus.LOADING))
         try {
-            val token = authPreferenceManager.getAuthToken() ?: throw IllegalStateException("Not authenticated")
-            
-            try {
-            val result = apiService.updateReservationStatus(reservationId, status, "Bearer $token")
-                
-                // Update in cache
-                val index = cachedReservations.indexOfFirst { it.id == reservationId }
-                if (index >= 0) {
-                    cachedReservations[index] = cachedReservations[index].copy(status = status)
-                }
-                
-            emit(ApiResource(status = ApiStatus.SUCCESS, data = result))
-            } catch (e: Exception) {
-                // Update local reservation status if API call fails
-                Log.e("ReservationRepo", "API call failed, updating local reservation status", e)
-                
-                val index = cachedReservations.indexOfFirst { it.id == reservationId }
-                if (index >= 0) {
-                    val updatedReservation = cachedReservations[index].copy(status = status)
-                    cachedReservations[index] = updatedReservation
-                    emit(ApiResource(status = ApiStatus.SUCCESS, data = updatedReservation))
-                } else {
-                    emit(ApiResource(status = ApiStatus.ERROR, message = "Reservation not found"))
-                }
+            if (useMockData) {
+                // Mock implementation
+                kotlinx.coroutines.delay(1000)
+                val mockReservation = Reservation(
+                    id = reservationId,
+                    userId = getCurrentUserId(),
+                    status = status
+                )
+                emit(ApiResource(status = ApiStatus.SUCCESS, data = mockReservation))
+            } else {
+                val token = getAuthHeader()
+                val statusUpdate = ReservationStatusUpdateRequest(status)
+                val reservation = apiService.updateReservationStatus(reservationId, statusUpdate, token)
+                emit(ApiResource(status = ApiStatus.SUCCESS, data = reservation))
             }
         } catch (e: Exception) {
+            Log.e("ReservationRepo", "Error updating status for reservation $reservationId: ${e.message}", e)
             emit(ApiResource(status = ApiStatus.ERROR, message = e.message ?: "Failed to update reservation status"))
         }
     }
@@ -318,31 +290,17 @@ class ReservationRepositoryImpl @Inject constructor(
     override fun cancelReservation(reservationId: Long): Flow<ApiResource<Boolean>> = flow {
         emit(ApiResource(status = ApiStatus.LOADING))
         try {
-            val token = authPreferenceManager.getAuthToken() ?: throw IllegalStateException("Not authenticated")
-            
-            try {
-            apiService.cancelReservation(reservationId, "Bearer $token")
-                
-                // Update in cache
-                val index = cachedReservations.indexOfFirst { it.id == reservationId }
-                if (index >= 0) {
-                    cachedReservations[index] = cachedReservations[index].copy(status = "CANCELLED")
-                }
-                
+            if (useMockData) {
+                // Mock implementation
+                kotlinx.coroutines.delay(1000)
                 emit(ApiResource(status = ApiStatus.SUCCESS, data = true))
-            } catch (e: Exception) {
-                // Update local reservation if API call fails
-                Log.e("ReservationRepo", "API call failed, cancelling local reservation", e)
-                
-                val index = cachedReservations.indexOfFirst { it.id == reservationId }
-                if (index >= 0) {
-                    cachedReservations[index] = cachedReservations[index].copy(status = "CANCELLED")
-            emit(ApiResource(status = ApiStatus.SUCCESS, data = true))
-                } else {
-                    emit(ApiResource(status = ApiStatus.ERROR, message = "Reservation not found"))
-                }
+            } else {
+                val token = getAuthHeader()
+                apiService.cancelReservation(reservationId, token)
+                emit(ApiResource(status = ApiStatus.SUCCESS, data = true))
             }
         } catch (e: Exception) {
+            Log.e("ReservationRepo", "Error canceling reservation $reservationId: ${e.message}", e)
             emit(ApiResource(status = ApiStatus.ERROR, message = e.message ?: "Failed to cancel reservation"))
         }
     }
@@ -350,54 +308,38 @@ class ReservationRepositoryImpl @Inject constructor(
     override fun getUpcomingReservations(): Flow<ApiResource<List<Reservation>>> = flow {
         emit(ApiResource(status = ApiStatus.LOADING))
         try {
-            val token = authPreferenceManager.getAuthToken() ?: throw IllegalStateException("Not authenticated")
-            val userId = authPreferenceManager.getUserId()?.toLongOrNull() ?: throw IllegalStateException("User ID not found")
-            
-            try {
-            val reservations = apiService.getUpcomingReservations(userId, "Bearer $token")
-            emit(ApiResource(status = ApiStatus.SUCCESS, data = reservations))
-            } catch (e: Exception) {
-                // Fallback to cached reservations if API call fails
-                Log.e("ReservationRepo", "API call failed, using cached data for upcoming reservations", e)
-                
-                val now = LocalDate.now()
-                val upcomingReservations = cachedReservations.filter { 
-                    it.status != "CANCELLED" && 
-                    it.status != "COMPLETED" && 
-                    (it.endDate.isEqual(now) || it.endDate.isAfter(now))
-                }
-                
-                emit(ApiResource(status = ApiStatus.SUCCESS, data = upcomingReservations))
+            if (useMockData) {
+                // Mock implementation
+                kotlinx.coroutines.delay(1000)
+                emit(ApiResource(status = ApiStatus.SUCCESS, data = emptyList()))
+            } else {
+                val token = getAuthHeader()
+                val userId = getCurrentUserId()
+                val reservations = apiService.getUpcomingReservations(userId, token)
+                emit(ApiResource(status = ApiStatus.SUCCESS, data = reservations))
             }
         } catch (e: Exception) {
-            emit(ApiResource(status = ApiStatus.ERROR, message = e.message ?: "Failed to load upcoming reservations"))
+            Log.e("ReservationRepo", "Error getting upcoming reservations: ${e.message}", e)
+            emit(ApiResource(status = ApiStatus.ERROR, message = e.message ?: "Failed to get upcoming reservations"))
         }
     }
 
     override fun getPastReservations(): Flow<ApiResource<List<Reservation>>> = flow {
         emit(ApiResource(status = ApiStatus.LOADING))
         try {
-            val token = authPreferenceManager.getAuthToken() ?: throw IllegalStateException("Not authenticated")
-            val userId = authPreferenceManager.getUserId()?.toLongOrNull() ?: throw IllegalStateException("User ID not found")
-            
-            try {
-            val reservations = apiService.getPastReservations(userId, "Bearer $token")
-            emit(ApiResource(status = ApiStatus.SUCCESS, data = reservations))
-            } catch (e: Exception) {
-                // Fallback to cached reservations if API call fails
-                Log.e("ReservationRepo", "API call failed, using cached data for past reservations", e)
-                
-                val now = LocalDate.now()
-                val pastReservations = cachedReservations.filter { 
-                    it.status == "COMPLETED" || 
-                    it.status == "CANCELLED" || 
-                    it.endDate.isBefore(now)
-                }
-                
-                emit(ApiResource(status = ApiStatus.SUCCESS, data = pastReservations))
+            if (useMockData) {
+                // Mock implementation
+                kotlinx.coroutines.delay(1000)
+                emit(ApiResource(status = ApiStatus.SUCCESS, data = emptyList()))
+            } else {
+                val token = getAuthHeader()
+                val userId = getCurrentUserId()
+                val reservations = apiService.getPastReservations(userId, token)
+                emit(ApiResource(status = ApiStatus.SUCCESS, data = reservations))
             }
         } catch (e: Exception) {
-            emit(ApiResource(status = ApiStatus.ERROR, message = e.message ?: "Failed to load past reservations"))
+            Log.e("ReservationRepo", "Error getting past reservations: ${e.message}", e)
+            emit(ApiResource(status = ApiStatus.ERROR, message = e.message ?: "Failed to get past reservations"))
         }
     }
 } 
