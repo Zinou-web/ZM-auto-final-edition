@@ -93,12 +93,12 @@ class CarBookingViewModel : ViewModel() {
         
         // Return mock data based on carId
         return when (carId) {
-            "1" -> CarDetails("Toyota Corolla", 5000.0, "2023", "Automatic", 4.5f)
-            "2" -> CarDetails("Honda Civic", 4800.0, "2022", "Automatic", 4.3f)
-            "3" -> CarDetails("Hyundai Elantra", 4500.0, "2023", "Manual", 4.2f)
-            "4" -> CarDetails("Kia Forte", 4200.0, "2022", "Automatic", 4.0f)
-            "5" -> CarDetails("Mazda 3", 5200.0, "2023", "Automatic", 4.7f)
-            else -> CarDetails("Car #$carId", 5000.0, "2023", "Automatic", 4.5f)
+            "1" -> CarDetails("Toyota Corolla", 55.0, "2022", "Automatic", 4.0f)
+            "2" -> CarDetails("BMW X5", 120.0, "2023", "Automatic", 5.0f)
+            "3" -> CarDetails("Mercedes S-Class", 150.0, "2023", "Automatic", 5.0f)
+            "4" -> CarDetails("Toyota Yaris", 45.0, "2021", "Manual", 3.0f)
+            "5" -> CarDetails("Tesla Model 3", 130.0, "2023", "Automatic", 5.0f)
+            else -> CarDetails("Car #$carId", 0.0, "", "", 0f)
         }
     }
     

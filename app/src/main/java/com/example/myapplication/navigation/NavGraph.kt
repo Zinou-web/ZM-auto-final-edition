@@ -60,6 +60,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.myapplication.ui.screens.auth.GoogleSignInTest
 import com.example.myapplication.ui.screens.home.FavoritesScreen
 import androidx.activity.ComponentActivity
+import com.example.myapplication.ui.screens.payment.EReceiptScreen
 
 /**
  * Enum class that contains all the possible screens in our app
@@ -121,7 +122,8 @@ enum class AppScreen {
     Logout,
     ProfileGeneral,
     ProfileLocation,
-    Favorites
+    Favorites,
+    EReceipt
 }
 
 /**
@@ -449,29 +451,38 @@ fun NavGraph(
         composable(AppScreen.PaymentMethod.name) {
             PaymentMethodScreen(
                 onBackClick = { navController.popBackStack() },
-                onEdahabiaClick = { 
-                    // Extract car and reservation ID from booking view model
-                    val carId = sharedBookingViewModel.carId
+                onEdahabiaClick = { reservationId -> 
                     // Navigate to Edahabia screen with reservation ID
-                    navController.navigate(AppScreen.Edahabia.name)
+                    Log.d("NavGraph", "PaymentMethodScreen: Navigating to Edahabia with Res ID: $reservationId")
+                    navController.navigate("${AppScreen.Edahabia.name}/$reservationId")
                 },
                 onCashClick = { 
                     // Navigate to Payment Pending when Cash payment option is selected
                     navController.navigate(AppScreen.PaymentPending.name)
                 },
-                viewModel = sharedBookingViewModel
+                viewModel = sharedBookingViewModel,
+                reservationViewModel = hiltViewModel()
             )
         }
 
-        composable(AppScreen.Edahabia.name) {
+        composable(
+            route = "${AppScreen.Edahabia.name}/{reservationId}",
+            arguments = listOf(
+                navArgument("reservationId") { 
+                    type = NavType.LongType
+                    defaultValue = 0L
+                }
+            )
+        ) { backStackEntry ->
+            val reservationId = backStackEntry.arguments?.getLong("reservationId") ?: 0L
+            Log.d("NavGraph", "EdahabiaScreen: Received reservationId: $reservationId")
             EdahabiaScreen(
+                reservationId = reservationId,
                 onBackClick = { navController.popBackStack() },
                 onContinueClick = { 
                     // Navigate to Bill screen
                     navController.navigate(AppScreen.Bill.name)
-        }
-                // No need to explicitly pass BookingViewModel as it's provided via viewModel()
-                // and PaymentViewModel is injected by Hilt
+                }
             )
         }
 
@@ -598,7 +609,8 @@ fun NavGraph(
 
         composable(AppScreen.PaymentPending.name) {
             PaymentPending(
-                onBackToHomeClick = { navController.navigateAndClear(AppScreen.Home.name) }
+                onBackToHomeClick = { navController.navigateAndClear(AppScreen.Home.name) },
+                bookingViewModel = sharedBookingViewModel
             )
         }
 
@@ -634,7 +646,30 @@ fun NavGraph(
                 onBackClick = { navController.popBackStack() },
                 onCarClick = { carId -> 
                     navController.navigate("${AppScreen.CarDetails.name}/$carId")
+                },
+                onHomeClick = { navController.navigateAndClear(AppScreen.Home.name) },
+                onMyBookingsClick = { navController.navigate(AppScreen.MyBooking.name) },
+                onProfileClick = { navController.navigate(AppScreen.Profile.name) }
+            )
+        }
+
+        // Add the EReceipt screen route
+        composable(route = "${AppScreen.EReceipt.name}/{reservationId}",
+            arguments = listOf(
+                navArgument("reservationId") {
+                    type = NavType.LongType
+                    defaultValue = 0L
                 }
+            )
+        ) { backStackEntry ->
+            val reservationId = backStackEntry.arguments?.getLong("reservationId") ?: 0L
+            Log.d("NavGraph", "Navigating to EReceiptScreen with reservationId: $reservationId")
+            EReceiptScreen(
+                reservationId = reservationId,
+                onBackClick = { navController.popBackStack() },
+                onContinueClick = { navController.popBackStack() },
+                bookingViewModel = sharedBookingViewModel,
+                reservationViewModel = hiltViewModel()
             )
         }
     }

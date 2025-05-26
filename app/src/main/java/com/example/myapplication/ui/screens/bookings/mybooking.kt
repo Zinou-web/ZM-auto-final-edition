@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.ColorLens
 import androidx.compose.material.icons.outlined.LocalGasStation
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Speed
@@ -45,6 +46,7 @@ import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.layout.ContentScale
 import com.example.myapplication.ui.screens.home.FavoriteViewModel
+import android.util.Log
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -70,18 +72,74 @@ fun MyBookingsScreen(
     
     // Load reservations when screen is first displayed
     LaunchedEffect(Unit) {
+        Log.d("MyBookingsScreen", "Loading upcoming reservations")
         viewModel.loadUpcomingReservations()
     }
     
     // Handle error states
     LaunchedEffect(uiState) {
-        if (uiState is ReservationUiState.Error) {
+        when (uiState) {
+            is ReservationUiState.Error -> {
+                val errorMsg = (uiState as ReservationUiState.Error).message
+                Log.e("MyBookingsScreen", "Error state: $errorMsg")
+                Toast.makeText(context, errorMsg, Toast.LENGTH_LONG).show()
+            }
+            is ReservationUiState.Loading -> {
+                Log.d("MyBookingsScreen", "Loading state")
+            }
+            else -> {
+                Log.d("MyBookingsScreen", "UI State: $uiState")
+            }
+        }
+    }
+    
+    // Function to navigate to E-Receipt screen
+    val navigateToEReceipt = { reservationId: Long ->
+        Log.d("MyBookingsScreen", "Navigating to EReceipt with ID: $reservationId")
+        try {
+            // Make sure reservationId is valid
+            if (reservationId > 0) {
+                // Find the reservation to ensure we have valid car data
+                val reservation = upcomingReservations.find { it.id == reservationId }
+                
+                if (reservation != null) {
+                    // Verify car data exists and log it for debugging
+                    val carInfo = reservation.car?.let { "${it.brand} ${it.model}" } ?: "Unknown"
+                    Log.d("MyBookingsScreen", "Found reservation $reservationId with car: $carInfo (carId: ${reservation.carId})")
+                    
+                    // Use the exact route format matching the composable definition
+                    val route = "${Screen.EReceipt.route}/$reservationId"
+                    Log.d("MyBookingsScreen", "Navigation route: $route")
+                    navController.navigate(route)
+                } else {
+                    Log.e("MyBookingsScreen", "Reservation $reservationId not found in current list")
+                    Toast.makeText(
+                        context,
+                        "Could not find reservation details",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            } else {
+                Log.e("MyBookingsScreen", "Invalid reservation ID: $reservationId")
+                Toast.makeText(
+                    context,
+                    "Cannot view receipt: Invalid reservation ID",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        } catch (e: Exception) {
+            Log.e("MyBookingsScreen", "Navigation error: ${e.message}", e)
             Toast.makeText(
                 context,
-                (uiState as ReservationUiState.Error).message,
-                Toast.LENGTH_LONG
+                "Error opening receipt: ${e.message}",
+                Toast.LENGTH_SHORT
             ).show()
         }
+    }
+    
+    // Update the lambda where we call this navigation
+    val upcomingItemClick: (Long) -> Unit = { reservationId ->
+        navigateToEReceipt(reservationId)
     }
     
     Box(
@@ -238,9 +296,7 @@ fun MyBookingsScreen(
                                 // Navigate to CancellationScreen with the reservation ID
                                 navController.navigate("${Screen.Cancelation.name}?reservationId=${reservationId}")
                             },
-                            onBillClick = { reservationId ->
-                                navController.navigate(Screen.Bill.name)
-                            },
+                            onBillClick = upcomingItemClick,
                             onCarClick = { carId ->
                                 navController.navigate("${Screen.CarDetails.name}/$carId")
                             },
@@ -366,13 +422,19 @@ fun UpcomingBookingsList(
 fun UpcomingBookingItem(
     reservation: Reservation,
     onCancelClick: () -> Unit,
-    onBillClick: () -> Unit,
+    onBillClick: (Long) -> Unit,
     onCarClick: () -> Unit,
     onModifyClick: () -> Unit = {},
     favoriteViewModel: FavoriteViewModel = hiltViewModel()
 ) {
     // Get car ID from reservation
-    val carId = reservation.car?.id ?: 0L
+    val carId = reservation.car?.id ?: reservation.carId
+    
+    // Debug log the car info to track down incorrect data
+    LaunchedEffect(Unit) {
+        Log.d("UpcomingBookingItem", "Showing reservation ID: ${reservation.id}")
+        Log.d("UpcomingBookingItem", "Car info: ${reservation.car?.brand} ${reservation.car?.model} (ID: $carId)")
+    }
     
     // Get favorite status from ViewModel
     val favoriteStatusMap by favoriteViewModel.favoriteStatusMap.collectAsState()
@@ -417,7 +479,8 @@ fun UpcomingBookingItem(
                         // Car Image
                         Image(
                             painter = painterResource(id = R.drawable.car_placeholder),
-                            contentDescription = "${reservation.car?.brand} ${reservation.car?.model}",
+                            contentDescription = 
+                                reservation.car?.let { "${it.brand} ${it.model}" } ?: "Car Image",
                             contentScale = ContentScale.Fit,
                             modifier = Modifier.fillMaxSize()
                         )
@@ -485,9 +548,9 @@ fun UpcomingBookingItem(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.Bottom
                 ) {
-                    // Car Name
+                    // Car Name - Use car info directly from reservation.car instead of hardcoded values
                     Text(
-                        text = "${reservation.car?.brand ?: "Toyota"} ${reservation.car?.model ?: "Corolla"}",
+                        text = reservation.car?.let { "${it.brand} ${it.model}" } ?: "Car Details Unavailable",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.Black
@@ -518,6 +581,27 @@ fun UpcomingBookingItem(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly,
                 ) {
+                    // Color
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.ColorLens,
+                            contentDescription = "Color",
+                            tint = Color(0xFF149459),
+                            modifier = Modifier.size(24.dp)
+                        )
+                        
+                        Spacer(modifier = Modifier.height(4.dp))
+                        
+                        Text(
+                            text = reservation.car?.colour ?: "N/A",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color.Gray
+                        )
+                    }
+                    
                     // Type
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally
@@ -553,7 +637,7 @@ fun UpcomingBookingItem(
                         Spacer(modifier = Modifier.height(4.dp))
                         
                         Text(
-                            text = "Automatic",
+                            text = reservation.car?.transmission ?: "Automatic",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium,
                             color = Color.Gray
@@ -574,7 +658,7 @@ fun UpcomingBookingItem(
                         Spacer(modifier = Modifier.height(4.dp))
                         
                         Text(
-                            text = "Petrol",
+                            text = reservation.car?.fuel ?: "Petrol",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium,
                             color = Color.Gray
@@ -647,9 +731,18 @@ fun UpcomingBookingItem(
                         )
                     }
 
-                    // Bill button
+                    // E-Receipt button (was Bill button)
                     Button(
-                        onClick = onBillClick,
+                        onClick = {
+                            // Make sure reservation ID is valid
+                            val id = reservation.id
+                            Log.d("UpcomingBookingItem", "E-Receipt button clicked for reservation ID: $id")
+                            if (id > 0) {
+                                onBillClick(id)
+                            } else {
+                                Log.e("UpcomingBookingItem", "Invalid reservation ID: $id")
+                            }
+                        },
                         modifier = Modifier
                             .weight(1f)
                             .height(50.dp),
@@ -659,7 +752,7 @@ fun UpcomingBookingItem(
                         )
                     ) {
                         Text(
-                            text = "Bill",
+                            text = "E-Receipt",
                             fontSize = 16.sp,
                             fontFamily = poppins,
                             fontWeight = FontWeight.SemiBold,

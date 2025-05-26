@@ -49,6 +49,7 @@ android {
         buildConfig true
     }
     compileOptions {
+        coreLibraryDesugaringEnabled true
         sourceCompatibility JavaVersion.VERSION_11
         targetCompatibility JavaVersion.VERSION_11
     }
@@ -167,4 +168,6 @@ dependencies {
     androidTestImplementation 'com.google.dagger:hilt-android-testing:2.50'
 
     debugImplementation 'androidx.compose.ui:ui-tooling'
+
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.1.5'
 }

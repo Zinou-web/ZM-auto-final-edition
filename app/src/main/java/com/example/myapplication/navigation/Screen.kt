@@ -60,5 +60,8 @@ enum class Screen(
     CompleteYourBooking("CompleteYourBooking"),
     
     // New Favorites Screen
-    Favorites("Favorites")
+    Favorites("Favorites"),
+
+    // New EReceipt Screen
+    EReceipt("EReceipt")
 } 

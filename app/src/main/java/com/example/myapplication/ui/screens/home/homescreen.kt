@@ -114,14 +114,17 @@ fun HomeScreen(
             is CarUiState.Success -> {
                 cars = (carUiState as CarUiState.Success).cars
             }
+            is CarUiState.PaginatedSuccess -> {
+                cars = (carUiState as CarUiState.PaginatedSuccess).pagedResponse.content
+            }
             is CarUiState.Error -> {
                 // Could handle error with a SnackBar or dialog
-                Log.e("HomeScreen", "Error: ${(carUiState as CarUiState.Error).message}")
+                Log.e("HomeScreen", "Error: "+(carUiState as CarUiState.Error).message)
             }
             else -> { /* Loading state handled in the UI */ }
         }
     }
-
+    
     // Initial load of cars
     LaunchedEffect(Unit) {
         viewModel.applyFilters(null) // Initialize with null filters to load all cars
@@ -154,103 +157,19 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Profile icon
-                Box(
-                    modifier = Modifier
-                        .size(45.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFFFFFFFF))
-                        .clickable(onClick = onProfileClick)
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.profilenav),
-                        contentDescription = "Profile",
-                        modifier = Modifier
-                            .size(45.dp)
-                            .padding(10.dp)
-                    )
-                }
-                
-                // App name in center
-                Text(
-                    text = "ZM Auto",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    fontFamily = poppins,
-                    color = Color(0xFF149459),
-                    modifier = Modifier.padding(start = 8.dp)
-                )
-                
-                // Icons on the right
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // Favorites icon
-                    Box(
-                        modifier = Modifier
-                            .size(45.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFFFFFFFF))
-                            .clickable(onClick = onFavoriteClick)
-                            .padding(10.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Favorite,
-                            contentDescription = "Favorites",
-                            tint = Color(0xFF149459),
-                        modifier = Modifier.size(25.dp)
-                    )
-                }
-
-                    // Notification icon
-                Box(
-                    modifier = Modifier
-                            .size(45.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFFFFFFFF))
-                            .clickable(onClick = onNotificationClick)
-                    ) {
-                        Badge(
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .offset((-2).dp, 2.dp)
-                        ) {
-                            Text(text = "2")
-                        }
-                        
-                    Icon(
-                            painter = painterResource(id = R.drawable.notification_icon),
-                        contentDescription = "Notifications",
-                            modifier = Modifier
-                                .padding(10.dp)
-                                .size(25.dp),
-                            tint = Color(0xFF149459)
-                    )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Search Bar with Filter Button
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
                 // Search Field
                 TextField(
                     value = searchQuery,
-                    onValueChange = { 
+                    onValueChange = {
                         searchQuery = it
+                        viewModel.searchCars(it)
                     },
                     placeholder = {
                         Text(
                             "Search any car...",
                             fontFamily = poppins,
                             fontWeight = FontWeight.Medium,
-                            fontSize = 18.sp,
+                            fontSize = 14.sp,
                             color = Color.Black.copy(alpha = 0.6f),
                             letterSpacing = 0.08.sp
                         )
@@ -260,7 +179,7 @@ fun HomeScreen(
                             painter = painterResource(id = R.drawable.search),
                             contentDescription = "Search",
                             tint = Color.Black,
-                            modifier = Modifier.size(25.dp)
+                            modifier = Modifier.size(20.dp)
                         )
                     },
                     trailingIcon = {
@@ -272,39 +191,69 @@ fun HomeScreen(
                                 Icon(
                                     imageVector = Icons.Filled.Clear,
                                     contentDescription = "Clear Search",
-                                    tint = Color.Gray
+                                    tint = Color.Gray,
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
                         }
                     },
                     modifier = Modifier
                         .weight(1f)
-                        .height(55.dp),
+                        .height(45.dp),
                     shape = RoundedCornerShape(20.dp),
                     colors = TextFieldDefaults.textFieldColors(
                         containerColor = Color.White,
                         unfocusedIndicatorColor = Color.Transparent,
                         focusedIndicatorColor = Color.Transparent
                     ),
-                    singleLine = true
+                    singleLine = true,
+                    textStyle = TextStyle(fontSize = 14.sp)
                 )
 
-                Spacer(modifier = Modifier.width(35.dp))
+                Spacer(modifier = Modifier.width(8.dp))
 
                 // Filter Button
                 Box(
                     modifier = Modifier
-                        .size(55.dp)
+                        .size(45.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .background(Color.White)
-                        .padding(13.dp)
+                        .padding(10.dp)
                         .clickable { showFilterBottomSheet = true }
                 ) {
                     Icon(
                         painter = painterResource(id = R.drawable.filter),
                         contentDescription = "Filter",
                         tint = Color.Black,
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(25.dp)
+                    )
+                }
+                
+                Spacer(modifier = Modifier.width(8.dp))
+                
+                // Notification icon
+                Box(
+                    modifier = Modifier
+                        .size(45.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFFFFFFF))
+                        .clickable(onClick = onNotificationClick)
+                ) {
+                    Badge(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .offset((-2).dp, 2.dp)
+                    ) {
+                        Text(text = "2")
+                    }
+                    
+                    Icon(
+                        painter = painterResource(id = R.drawable.notification_icon),
+                        contentDescription = "Notifications",
+                        modifier = Modifier
+                            .padding(10.dp)
+                            .size(25.dp),
+                        tint = Color(0xFF149459)
                     )
                 }
             }
@@ -341,9 +290,9 @@ fun HomeScreen(
                         brandName = "All",
                         iconRes = R.drawable.all,
                         isSelected = selectedBrand == "All",
-                        onClick = { 
-                            selectedBrand = "All"
-                            expandedBrands = !expandedBrands 
+                        onClick = {
+                            resetFilters()
+                            expandedBrands = !expandedBrands
                         }
                     )
                 }
@@ -361,7 +310,10 @@ fun HomeScreen(
                         brandName = brand,
                         iconRes = icon,
                         isSelected = selectedBrand == brand,
-                        onClick = { selectedBrand = brand }
+                        onClick = {
+                            selectedBrand = brand
+                            viewModel.applyFilters(FilterParams(brand = brand))
+                        }
                     )
                 }
 
@@ -377,7 +329,10 @@ fun HomeScreen(
                             brandName = brand,
                             iconRes = icon,
                             isSelected = selectedBrand == brand,
-                            onClick = { selectedBrand = brand }
+                            onClick = {
+                                selectedBrand = brand
+                                viewModel.applyFilters(FilterParams(brand = brand))
+                            }
                         )
                     }
                 }
@@ -1696,6 +1651,9 @@ fun HomeScreenPreview() {
 fun FavoritesScreen(
     onBackClick: () -> Unit = {},
     onCarClick: (String) -> Unit = {},
+    onHomeClick: () -> Unit = {},
+    onMyBookingsClick: () -> Unit = {},
+    onProfileClick: () -> Unit = {},
     favoriteViewModel: FavoriteViewModel = hiltViewModel()
 ) {
     // Calculate top padding based on status bar height
@@ -1722,6 +1680,7 @@ fun FavoritesScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(top = topPadding)
+                .padding(bottom = 80.dp) // Add bottom padding for the nav bar
         ) {
             // Header with back button
             Box(
@@ -1863,6 +1822,113 @@ fun FavoritesScreen(
                 }
             }
         }
+
+        // Add the bottom navigation bar
+        FavoritesBottomNavBar(
+            modifier = Modifier.align(Alignment.BottomCenter),
+            onHomeClick = onHomeClick,
+            onMyBookingsClick = onMyBookingsClick,
+            onFavoriteClick = { /* Already on Favorites */ },
+            onProfileClick = onProfileClick
+        )
+    }
+}
+
+@Composable
+fun FavoritesBottomNavBar(
+    modifier: Modifier = Modifier,
+    onHomeClick: () -> Unit = {},
+    onMyBookingsClick: () -> Unit = {},
+    onFavoriteClick: () -> Unit = {},
+    onProfileClick: () -> Unit = {}
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(80.dp),
+        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            FavoritesBottomNavItem(
+                iconRes = R.drawable.home,
+                label = "Home",
+                onClick = onHomeClick
+            )
+
+            FavoritesBottomNavItem(
+                iconRes = R.drawable.catalog,
+                label = "Bookings",
+                onClick = onMyBookingsClick
+            )
+
+            FavoritesBottomNavItem(
+                iconRes = R.drawable.heart,
+                label = "Favorite",
+                isSelected = true,
+                onClick = onFavoriteClick
+            )
+
+            FavoritesBottomNavItem(
+                iconRes = R.drawable.profilenav,
+                label = "Profile",
+                onClick = onProfileClick
+            )
+        }
+    }
+}
+
+@Composable
+fun FavoritesBottomNavItem(
+    iconRes: Int,
+    label: String,
+    isSelected: Boolean = false,
+    onClick: () -> Unit = {}
+) {
+    val itemColor = if (isSelected) Color.Black else Color.Gray
+    val bgColor = if (isSelected) Color(0xFFEADDFA) else Color.Transparent
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier
+            .padding(horizontal = 12.dp)
+            .clickable(onClick = onClick)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(bgColor)
+                .padding(8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                painter = painterResource(id = iconRes),
+                contentDescription = label,
+                tint = itemColor,
+                modifier = Modifier.size(22.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Text(
+            text = label,
+            style = TextStyle(
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                color = itemColor,
+                fontFamily = poppins
+            )
+        )
     }
 }
 

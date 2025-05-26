@@ -22,11 +22,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.myapplication.R
 import com.example.myapplication.ui.screens.home.BookingViewModel
 import com.example.myapplication.ui.theme.poppins
 import com.example.myapplication.ui.screens.BookingCar.ReservationViewModel
+import com.example.myapplication.ui.screens.home.hiltViewModel
 
 private const val CASH = "Cash"
 private const val CARD = "Card"
@@ -41,7 +41,7 @@ data class PaymentMethodOption(
 @Composable
 fun PaymentMethodScreen(
     onBackClick: () -> Unit,
-    onEdahabiaClick: (reservationId: Long) -> Unit,
+    onEdahabiaClick: () -> Unit,
     onCashClick: () -> Unit,
     viewModel: BookingViewModel = viewModel(),
     reservationViewModel: ReservationViewModel = hiltViewModel()
@@ -146,23 +146,12 @@ fun PaymentMethodScreen(
                 onClick = {
                     // Clear any previous errors
                     errorMessage = null
-                    isLoading = true // Set loading true for both flows initially
                     
                     if (selectedOption == CARD) {
-                        // For Edahabia card, first create a PENDING reservation
-                        Log.d("PaymentMethod", "Edahabia selected. Attempting to create PENDING reservation.")
-                        viewModel.createEdahabiaPendingReservation { success, newReservationId ->
-                            isLoading = false
-                            if (success && newReservationId != null) {
-                                Log.d("PaymentMethod", "PENDING Edahabia reservation created successfully with ID: $newReservationId. Navigating to Edahabia screen.")
-                                onEdahabiaClick(newReservationId) // Pass the new ID
-                            } else {
-                                Log.e("PaymentMethod", "Failed to create PENDING Edahabia reservation.")
-                                errorMessage = "Failed to initialize Edahabia payment. Please try again later."
-                            }
-                        }
+                        // For Edahabia card, navigate to the card details screen
+                        onEdahabiaClick()
                     } else if (selectedOption == CASH) {
-                        // isLoading = true; // Already set above
+                        isLoading = true
                         
                         // Wrap onCashClick in a try-catch to handle exceptions
                         try {

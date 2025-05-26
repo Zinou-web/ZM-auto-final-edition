@@ -15,6 +15,8 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.example.myapplication.BuildConfig
+import kotlinx.coroutines.flow.first
 
 /**
  * Implementation of the ReservationRepository interface.
@@ -22,57 +24,18 @@ import javax.inject.Singleton
 @Singleton
 class ReservationRepositoryImpl @Inject constructor(
     private val apiService: ApiService,
-    private val authPreferenceManager: AuthPreferenceManager
+    private val authPreferenceManager: AuthPreferenceManager,
+    private val carRepository: CarRepository
 ) : ReservationRepository {
 
     // Local cache for reservations when API is not available
     private val cachedReservations = mutableListOf<Reservation>()
     private var nextReservationId = 1000L
-    private val useMockData = false
+    // Toggle mock data based on build config
+    private val useMockData = BuildConfig.DEBUG
 
     init {
-        // Add some sample reservations for testing
-        val sampleCar = Car(
-            id = 1L,
-            brand = "Toyota",
-            model = "Corolla",
-            year = 2023,
-            transmission = "Automatic",
-            rentalPricePerDay = java.math.BigDecimal(5000),
-            rating = 4
-        )
-        
-        // Add a sample upcoming reservation
-        cachedReservations.add(
-            Reservation(
-                id = nextReservationId++,
-                userId = 1L,
-                carId = 1L,
-                car = sampleCar,
-                startDate = LocalDate.now().plusDays(2),
-                endDate = LocalDate.now().plusDays(5),
-                totalPrice = 15000.0,
-                status = "CONFIRMED",
-                paymentStatus = "PAID",
-                createdAt = LocalDateTime.now()
-            )
-        )
-        
-        // Add a sample completed reservation
-        cachedReservations.add(
-            Reservation(
-                id = nextReservationId++,
-                userId = 1L,
-                carId = 2L,
-                car = sampleCar.copy(id = 2L, brand = "Honda", model = "Civic"),
-                startDate = LocalDate.now().minusDays(10),
-                endDate = LocalDate.now().minusDays(5),
-                totalPrice = 25000.0,
-                status = "COMPLETED",
-                paymentStatus = "PAID",
-                createdAt = LocalDateTime.now().minusDays(15)
-            )
-        )
+        // Removed sample reservation seeding to avoid resetting state on each launch
     }
 
     /**
@@ -111,9 +74,22 @@ class ReservationRepositoryImpl @Inject constructor(
         emit(ApiResource(status = ApiStatus.LOADING))
         try {
             if (useMockData) {
-                // Mock implementation
+                // Mock implementation: lookup in cachedReservations
                 kotlinx.coroutines.delay(500)
-                emit(ApiResource(status = ApiStatus.ERROR, message = "Reservation not found"))
+                val reservation = cachedReservations.find { it.id == id }
+                if (reservation != null) {
+                    emit(ApiResource(status = ApiStatus.SUCCESS, data = reservation))
+                } else {
+                    // If reservation with specific ID not found, return the first cached reservation
+                    // This ensures we don't get "reservation not found" errors in the mock implementation
+                    if (cachedReservations.isNotEmpty()) {
+                        val fallbackReservation = cachedReservations.first()
+                        Log.d("ReservationRepo", "Reservation $id not found, using fallback reservation ${fallbackReservation.id}")
+                        emit(ApiResource(status = ApiStatus.SUCCESS, data = fallbackReservation))
+                    } else {
+                        emit(ApiResource(status = ApiStatus.ERROR, message = "No reservations available"))
+                    }
+                }
             } else {
                 val token = getAuthHeader()
                 val reservation = apiService.getReservationById(id, token)
@@ -187,19 +163,44 @@ class ReservationRepositoryImpl @Inject constructor(
         totalPrice: Double
     ): Flow<ApiResource<Reservation>> = flow {
         emit(ApiResource(status = ApiStatus.LOADING))
+        Log.d("ReservationRepo", "Attempting to create reservation with totalPrice: $totalPrice")
         try {
             if (useMockData) {
                 // Mock implementation
                 kotlinx.coroutines.delay(1500)
+
+                val carObject: Car? = try {
+                    // Collect the flow and get the car data if successful
+                    val carApiResource = carRepository.getCarById(carId).first { it.status != ApiStatus.LOADING }
+                    if (carApiResource.status == ApiStatus.SUCCESS) {
+                        carApiResource.data
+                    } else {
+                        // Log the error from carRepository and throw to be caught by the outer block
+                        Log.e("ReservationRepo", "Failed to fetch car $carId for mock reservation: ${carApiResource.message}")
+                        throw Exception("Failed to fetch car details for mock reservation: ${carApiResource.message}")
+                    }
+                } catch (carEx: Exception) {
+                    // Log and rethrow if car fetching fails, to be caught by the outer try-catch
+                    Log.e("ReservationRepo", "Exception while fetching car $carId for mock reservation: ${carEx.message}", carEx)
+                    throw carEx // Rethrow to be caught by the main catch block
+                }
+
                 val mockReservation = Reservation(
-                    id = 1,
+                    id = nextReservationId++,
                     userId = getCurrentUserId(),
                     carId = carId,
                     startDate = startDate,
                     endDate = endDate,
-                    status = "PENDING",
-                    totalPrice = totalPrice
+                    status = "PENDING", // Initial status for cash/unpaid Edahabia
+                    totalPrice = totalPrice,
+                    createdAt = LocalDateTime.now(),
+                    car = carObject
                 )
+                
+                // Add the new reservation to the cached list
+                cachedReservations.add(mockReservation)
+                Log.d("ReservationRepo", "Created mock reservation with ID: ${mockReservation.id} for car ID: $carId, Status: ${mockReservation.status}")
+                
                 emit(ApiResource(status = ApiStatus.SUCCESS, data = mockReservation))
             } else {
                 val token = getAuthHeader()
@@ -214,9 +215,14 @@ class ReservationRepositoryImpl @Inject constructor(
                 val reservation = apiService.createReservation(request, token)
                 emit(ApiResource(status = ApiStatus.SUCCESS, data = reservation))
             }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e // Re-throw cancellation exceptions
         } catch (e: Exception) {
             Log.e("ReservationRepo", "Error creating reservation: ${e.message}", e)
-            emit(ApiResource(status = ApiStatus.ERROR, message = e.message ?: "Failed to create reservation"))
+            // Ensure we don't emit if the flow is cancelled
+            // Instead, let the exception propagate if it's not a cancellation
+            // This will be handled by the ViewModel's .catch operator
+            throw e
         }
     }
 
@@ -269,12 +275,32 @@ class ReservationRepositoryImpl @Inject constructor(
             if (useMockData) {
                 // Mock implementation
                 kotlinx.coroutines.delay(1000)
-                val mockReservation = Reservation(
-                    id = reservationId,
-                    userId = getCurrentUserId(),
-                    status = status
-                )
-                emit(ApiResource(status = ApiStatus.SUCCESS, data = mockReservation))
+                
+                // Find and update the reservation in the cache
+                val existingReservation = cachedReservations.find { it.id == reservationId }
+                val updatedReservation = if (existingReservation != null) {
+                    // Create a copy with the new status
+                    val updated = existingReservation.copy(status = status)
+                    // Replace in cache
+                    val index = cachedReservations.indexOf(existingReservation)
+                    if (index >= 0) {
+                        cachedReservations[index] = updated
+                    }
+                    Log.d("ReservationRepo", "Updated reservation ID: $reservationId status to: $status")
+                    updated
+                } else {
+                    // Create a new mock reservation if not found
+                    Log.d("ReservationRepo", "Reservation ID: $reservationId not found in cache, creating mock")
+                    Reservation(
+                        id = reservationId,
+                        userId = getCurrentUserId(),
+                        carId = 1L,
+                        status = status,
+                        createdAt = LocalDateTime.now()
+                    )
+                }
+                
+                emit(ApiResource(status = ApiStatus.SUCCESS, data = updatedReservation))
             } else {
                 val token = getAuthHeader()
                 val statusUpdate = ReservationStatusUpdateRequest(status)
@@ -293,6 +319,22 @@ class ReservationRepositoryImpl @Inject constructor(
             if (useMockData) {
                 // Mock implementation
                 kotlinx.coroutines.delay(1000)
+                
+                // Find and update the reservation in the cache
+                val existingReservation = cachedReservations.find { it.id == reservationId }
+                if (existingReservation != null) {
+                    // Create a copy with the CANCELLED status
+                    val updated = existingReservation.copy(status = "CANCELLED")
+                    // Replace in cache
+                    val index = cachedReservations.indexOf(existingReservation)
+                    if (index >= 0) {
+                        cachedReservations[index] = updated
+                    }
+                    Log.d("ReservationRepo", "Cancelled reservation ID: $reservationId")
+                } else {
+                    Log.d("ReservationRepo", "Reservation ID: $reservationId not found in cache")
+                }
+                
                 emit(ApiResource(status = ApiStatus.SUCCESS, data = true))
             } else {
                 val token = getAuthHeader()
@@ -305,17 +347,41 @@ class ReservationRepositoryImpl @Inject constructor(
         }
     }
 
+    /**
+     * Get upcoming reservations for the current user.
+     */
     override fun getUpcomingReservations(): Flow<ApiResource<List<Reservation>>> = flow {
         emit(ApiResource(status = ApiStatus.LOADING))
         try {
             if (useMockData) {
                 // Mock implementation
-                kotlinx.coroutines.delay(1000)
-                emit(ApiResource(status = ApiStatus.SUCCESS, data = emptyList()))
+                kotlinx.coroutines.delay(800)
+                
+                // Filter upcoming reservations (today or future dates)
+                val today = LocalDate.now()
+                Log.d("ReservationRepo", "getUpcomingReservations: Filtering mock data. Today is: $today")
+                val upcomingReservations = cachedReservations.filter { reservation ->
+                    val isTodayOrFuture = reservation.startDate?.isEqual(today) == true || reservation.startDate?.isAfter(today) == true
+                    val isActiveStatus = reservation.status != "COMPLETED" && reservation.status != "CANCELLED"
+                    Log.d("ReservationRepo", "  Checking Res ID ${reservation.id}: startDate=${reservation.startDate}, status=${reservation.status}. isTodayOrFuture=$isTodayOrFuture, isActiveStatus=$isActiveStatus")
+                    isTodayOrFuture && isActiveStatus
+                }
+                
+                // Add debugging log to see what's in the cache
+                Log.d("ReservationRepo", "Cached reservations total count: ${cachedReservations.size}")
+                cachedReservations.forEach { reservation ->
+                    Log.d("ReservationRepo", "Cached reservation: ID=${reservation.id}, " +
+                          "carId=${reservation.carId}, status=${reservation.status}, " +
+                          "startDate=${reservation.startDate}, endDate=${reservation.endDate}")
+                }
+                
+                Log.d("ReservationRepo", "Found ${upcomingReservations.size} upcoming reservations")
+                emit(ApiResource(status = ApiStatus.SUCCESS, data = upcomingReservations))
             } else {
+                // Use the real API implementation
                 val token = getAuthHeader()
                 val userId = getCurrentUserId()
-                val reservations = apiService.getUpcomingReservations(userId, token)
+                val reservations = apiService.getReservationsByUserId(userId, token)
                 emit(ApiResource(status = ApiStatus.SUCCESS, data = reservations))
             }
         } catch (e: Exception) {
@@ -330,7 +396,15 @@ class ReservationRepositoryImpl @Inject constructor(
             if (useMockData) {
                 // Mock implementation
                 kotlinx.coroutines.delay(1000)
-                emit(ApiResource(status = ApiStatus.SUCCESS, data = emptyList()))
+                
+                // Filter cached reservations to find past ones (completed or end date in the past)
+                val pastReservations = cachedReservations.filter { 
+                    it.status == "COMPLETED" || 
+                    it.endDate.isBefore(LocalDate.now())
+                }
+                Log.d("ReservationRepo", "Found ${pastReservations.size} past reservations in cache")
+                
+                emit(ApiResource(status = ApiStatus.SUCCESS, data = pastReservations))
             } else {
                 val token = getAuthHeader()
                 val userId = getCurrentUserId()

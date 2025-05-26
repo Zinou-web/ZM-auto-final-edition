@@ -22,7 +22,7 @@ data class Car(
     val colour: String = "",
     val transmission: String = "Manual",
     val fuel: String = "Petrol",
-    val seatingCapacity: Long = 4,
+    val seatingCapacity: Int = 4,
     val rentalPricePerDay: BigDecimal = BigDecimal.ZERO,
     val rentalPricePerHour: BigDecimal? = null,
     val rentalStatus: String = "Available",

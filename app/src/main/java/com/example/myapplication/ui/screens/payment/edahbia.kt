@@ -1,5 +1,7 @@
 package com.example.myapplication.ui.screens.payment
 
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -30,15 +32,16 @@ import com.example.myapplication.R
 import com.example.myapplication.data.model.PaymentMethodType
 import com.example.myapplication.ui.screens.home.BookingViewModel
 import com.example.myapplication.ui.theme.poppins
-import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.collect
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EdahabiaScreen(
+    reservationId: Long,
     onBackClick: () -> Unit,
     onContinueClick: () -> Unit,
     paymentViewModel: PaymentViewModel = hiltViewModel(),
-    bookingViewModel: BookingViewModel = viewModel()
+    bookingViewModel: BookingViewModel = hiltViewModel()
 ) {
     // Local state for UI
     var cardNumber by remember { mutableStateOf("") }
@@ -83,10 +86,17 @@ fun EdahabiaScreen(
             is PaymentUiState.ValidationError -> {
                 isLoading = false
                 val errors = (paymentUiState as PaymentUiState.ValidationError).errors
-                cardNumberError = errors["cardNumber"]
-                cardHolderNameError = errors["cardHolderName"]
-                cvvError = errors["cvv"]
-                expireDateError = errors["expiryDate"]
+                
+                // Map validation errors to UI fields
+                errors["cardNumber"]?.let { cardNumberError = it }
+                errors["cardHolderName"]?.let { cardHolderNameError = it }
+                errors["cvv"]?.let { cvvError = it }
+                errors["expiryDate"]?.let { expireDateError = it }
+                
+                // Show general error if needed
+                if (errors.isNotEmpty()) {
+                    generalError = "Please check your payment details and try again."
+                }
             }
             is PaymentUiState.Initial -> {
                 isLoading = false
@@ -95,13 +105,29 @@ fun EdahabiaScreen(
         }
     }
     
-    // Update ViewModel when form values change
-    LaunchedEffect(cardNumber, cardHolderName, cvv, expireDate, saveCardDetails) {
-        paymentViewModel.updateCardNumber(cardNumber)
-        paymentViewModel.updateCardHolderName(cardHolderName)
-        paymentViewModel.updateCvv(cvv)
-        paymentViewModel.updateExpiryDate(expireDate)
-        paymentViewModel.updateSaveCardDetails(saveCardDetails)
+    // Function to handle payment processing
+    val processPayment = {
+        try {
+            // Update ViewModel with form values
+            paymentViewModel.updateCardNumber(cardNumber.replace(" ", ""))
+            paymentViewModel.updateCardHolderName(cardHolderName)
+            paymentViewModel.updateCvv(cvv)
+            paymentViewModel.updateExpiryDate(expireDate)
+            paymentViewModel.updateSaveCardDetails(saveCardDetails)
+            
+            Log.d("EdahabiaScreen", "Processing payment for reservationId: $reservationId, amount: ${bookingViewModel.totalPrice}")
+
+            // Call processPayment with EDAHABIA type and the passed reservationId
+            paymentViewModel.processPayment(
+                reservationId = reservationId,
+                paymentMethod = PaymentMethodType.EDAHABIA.name,
+                amount = bookingViewModel.totalPrice
+            )
+        } catch (e: Exception) {
+            Log.e("EdahabiaScreen", "Error during payment processing", e)
+            generalError = "Error: ${e.message}"
+            isLoading = false
+        }
     }
 
     // Calculate top padding based on status bar height
@@ -178,15 +204,23 @@ fun EdahabiaScreen(
 
             // Display general error message if any
             if (generalError != null) {
-                Text(
-                    text = generalError ?: "",
-                    color = Color.Red,
-                    fontSize = 14.sp,
-                    fontFamily = poppins,
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                )
+                        .padding(horizontal = 16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFFFFEBEE)
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        text = generalError ?: "",
+                        color = Color.Red,
+                        fontSize = 14.sp,
+                        fontFamily = poppins,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                }
                 
                 Spacer(modifier = Modifier.height(16.dp))
             }
@@ -240,7 +274,7 @@ fun EdahabiaScreen(
                         fontSize = 12.sp,
                         fontFamily = poppins,
                         modifier = Modifier.padding(top = 4.dp)
-                )
+                    )
                 }
             }
 
@@ -291,7 +325,7 @@ fun EdahabiaScreen(
                         fontSize = 12.sp,
                         fontFamily = poppins,
                         modifier = Modifier.padding(top = 4.dp)
-                )
+                    )
                 }
             }
 
@@ -346,7 +380,7 @@ fun EdahabiaScreen(
                             fontSize = 12.sp,
                             fontFamily = poppins,
                             modifier = Modifier.padding(top = 4.dp)
-                    )
+                        )
                     }
                 }
 
@@ -395,7 +429,7 @@ fun EdahabiaScreen(
                             fontSize = 12.sp,
                             fontFamily = poppins,
                             modifier = Modifier.padding(top = 4.dp)
-                    )
+                        )
                     }
                 }
             }
@@ -437,36 +471,10 @@ fun EdahabiaScreen(
                 .padding(16.dp)
         ) {
             Button(
-                onClick = {
-                    // Process the payment
-                    try {
-                        // Check if we have a recently created reservation ID in the ReservationViewModel
-                        // Get the reservation ID either from the BookingViewModel or from the most recent reservation
-                        val reservationId = if (bookingViewModel.reservationId > 0) {
-                            bookingViewModel.reservationId
-                        } else {
-                            // Log debug information
-                            Log.d("EdahabiaScreen", "Using default reservation ID because bookingViewModel.reservationId = ${bookingViewModel.reservationId}")
-                            1L  // Fallback to 1L if no reservation ID is available
-                        }
-                        
-                        // Log the reservation ID being used
-                        Log.d("EdahabiaScreen", "Processing payment for reservation ID: $reservationId")
-                        
-                        paymentViewModel.processPayment(
-                            reservationId = reservationId, 
-                            paymentMethod = PaymentMethodType.EDAHABIA.name,
-                            amount = bookingViewModel.totalPrice
-                        )
-                    } catch (e: Exception) {
-                        // Log and handle any exceptions
-                        Log.e("EdahabiaScreen", "Error processing payment: ${e.message}", e)
-                        generalError = "Payment processing error: ${e.message}"
-                    }
-                },
+                onClick = { processPayment() },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
+                    .height(48.dp),
                 shape = RoundedCornerShape(20.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFF149459)
@@ -525,6 +533,7 @@ private fun formatExpirationDate(input: String): String {
 @Composable
 fun EdahabiaScreenPreview() {
     EdahabiaScreen(
+        reservationId = 12345L,
         onBackClick = {},
         onContinueClick = {}
     )

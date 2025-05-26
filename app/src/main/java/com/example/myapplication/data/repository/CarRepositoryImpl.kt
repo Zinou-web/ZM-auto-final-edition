@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.flow
 import java.math.BigDecimal
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.example.myapplication.BuildConfig
 
 /**
  * Implementation of the CarRepository interface.
@@ -22,8 +23,8 @@ class CarRepositoryImpl @Inject constructor(
     private val authPreferenceManager: AuthPreferenceManager
 ) : CarRepository {
 
-    // Set this to true to use mock data, false to use real backend
-    private val useMockData = true
+    // Toggle mock data based on build config: debug builds use mock, release uses real backend
+    private val useMockData = BuildConfig.DEBUG
 
     // Mock car data
     private val mockCars = listOf(
@@ -181,17 +182,60 @@ class CarRepositoryImpl @Inject constructor(
         emit(ApiResource(status = ApiStatus.LOADING))
         try {
             if (useMockData) {
-                Log.d("CarRepository", "Using mock car data for ID: $id")
-                kotlinx.coroutines.delay(1000) // Simulate network delay
-                val car = mockCars.find { it.id == id } 
-                    ?: throw Exception("Car not found with ID: $id")
+                // Mock implementation
+                kotlinx.coroutines.delay(500)
+                
+                // Find car in our mock database or use a fallback
+                val car = mockCars.find { it.id == id } ?: run {
+                    Log.w("CarRepo", "Car ID $id not found in mock data. Creating a default car.")
+                    // Fallback to creating a dynamic mock car if not found in the predefined list
+                    val type = if (id % 2 == 0L) "SUV" else "Sedan"
+                    val seats = if (type == "SUV") 7 else 5
+                    val brand = when (id % 5) {
+                        0L -> "Toyota"
+                        1L -> "BMW"
+                        2L -> "Mercedes"
+                        3L -> "Audi"
+                        else -> "Volkswagen"
+                    }
+                    val model = when (id % 3) {
+                        0L -> "Premium"
+                        1L -> "Standard"
+                        else -> "Economy"
+                    }
+                    val color = when (id % 6) {
+                        0L -> "White"
+                        1L -> "Black"
+                        2L -> "Silver"
+                        3L -> "Blue"
+                        4L -> "Red"
+                        else -> "Green"
+                    }
+                    Car(
+                        id = id,
+                        brand = brand,
+                        model = model,
+                        year = 2023,
+                        transmission = "Automatic",
+                        rentalPricePerDay = java.math.BigDecimal(5000 + (id % 10) * 1000),
+                        rating = 4L,
+                        type = type,
+                        seatingCapacity = seats,
+                        colour = color
+                    )
+                }
+                
+                Log.d("CarRepo", "Returning mock car: ${car.brand} ${car.model} for id $id")
                 emit(ApiResource(status = ApiStatus.SUCCESS, data = car))
             } else {
                 val car = apiService.getCarById(id)
                 emit(ApiResource(status = ApiStatus.SUCCESS, data = car))
             }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e // Re-throw cancellation exceptions
         } catch (e: Exception) {
-            emit(ApiResource(status = ApiStatus.ERROR, message = e.message ?: "Failed to load car details"))
+            Log.e("CarRepo", "Error getting car $id: ${e.message}", e)
+            throw e // Re-throw other exceptions to be caught by the collector
         }
     }
 

@@ -24,12 +24,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.R
+import com.example.myapplication.ui.screens.home.BookingViewModel
 import com.example.myapplication.ui.theme.poppins
 
 @Composable
 fun PaymentPending(
-    onBackToHomeClick: () -> Unit
+    onBackToHomeClick: () -> Unit,
+    bookingViewModel: BookingViewModel = viewModel()
 ) {
     // Calculate top padding based on status bar height
     val topPadding = with(LocalDensity.current) {
@@ -52,8 +55,7 @@ fun PaymentPending(
                     .fillMaxWidth()
                     .padding(top = 30.dp, start = 15.dp, end = 15.dp, bottom = 10.dp)
             ) {
-                // Title "Payment Pending" at the center
-
+                // Title removed as requested
                 
                 // Empty spacers for alignment
                 Spacer(modifier = Modifier.size(45.dp).align(Alignment.CenterStart))
@@ -69,18 +71,18 @@ fun PaymentPending(
                     .verticalScroll(rememberScrollState())
             ) {
 
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.payment_pending_photos),
-                            contentDescription = "Pending icon",
-                            modifier = Modifier
-                                .size(150.dp)
-                                .padding(8.dp)
-                        )
-                    }
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.payment_pending_photos),
+                        contentDescription = "Pending icon",
+                        modifier = Modifier
+                            .size(150.dp)
+                            .padding(8.dp)
+                    )
+                }
 
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -104,10 +106,153 @@ fun PaymentPending(
                     fontFamily = poppins,
                     modifier = Modifier
                         .padding(horizontal = 32.dp).alpha(0.6f)
-
-
-
                 )
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                // Reservation information card
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color.White
+                    ),
+                    elevation = CardDefaults.cardElevation(
+                        defaultElevation = 4.dp
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Text(
+                            text = "Reservation Details",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            color = Color.Black
+                        )
+                        
+                        Spacer(modifier = Modifier.height(12.dp))
+                        
+                        // Reservation ID
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Reservation ID:",
+                                color = Color.Gray,
+                                fontSize = 14.sp
+                            )
+                            Text(
+                                text = "#${bookingViewModel.reservationId}",
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 14.sp,
+                                color = Color.Black
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        // Car details
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Car:",
+                                color = Color.Gray,
+                                fontSize = 14.sp
+                            )
+                            Text(
+                                text = bookingViewModel.carName,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 14.sp,
+                                color = Color.Black
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        // Dates
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Pick-up:",
+                                color = Color.Gray,
+                                fontSize = 14.sp
+                            )
+                            Text(
+                                text = "${bookingViewModel.pickUpDate} | ${bookingViewModel.pickUpTime}",
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 14.sp,
+                                color = Color.Black
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Drop-off:",
+                                color = Color.Gray,
+                                fontSize = 14.sp
+                            )
+                            Text(
+                                text = "${bookingViewModel.dropOffDate} | ${bookingViewModel.dropOffTime}",
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 14.sp,
+                                color = Color.Black
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        // Total price
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Total Price:",
+                                color = Color.Gray,
+                                fontSize = 14.sp
+                            )
+                            Text(
+                                text = "${bookingViewModel.totalPrice} DA",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = Color(0xFF149459)
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        // Payment status
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Payment Status:",
+                                color = Color.Gray,
+                                fontSize = 14.sp
+                            )
+                            Text(
+                                text = "Pay on Arrival",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = Color(0xFFFFA000) // Amber color for pending
+                            )
+                        }
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(40.dp))
 
@@ -130,6 +275,8 @@ fun PaymentPending(
                         fontFamily = poppins
                     )
                 }
+                
+                Spacer(modifier = Modifier.height(24.dp))
             }
         }
     }

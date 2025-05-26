@@ -19,6 +19,9 @@ import com.example.myapplication.data.model.Car
 import com.example.myapplication.ui.viewmodel.CarViewModel
 import com.example.myapplication.ui.viewmodel.CarsUiState
 import java.math.BigDecimal
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -100,89 +103,6 @@ fun CarList(
     ) {
         items(cars) { car ->
             CarItem(car = car, onClick = { onCarClick(car.id) })
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun CarItem(
-    car: Car,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-    ) {
-        Column {
-            AsyncImage(
-                model = car.picture,
-                contentDescription = "${car.brand} ${car.model}",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp),
-                contentScale = ContentScale.Crop
-            )
-            
-            Column(
-                modifier = Modifier.padding(16.dp)
-            ) {
-                Text(
-                    text = "${car.brand} ${car.model} (${car.year})",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = car.transmission,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    
-                    Text(
-                        text = car.fuel,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    
-                    Text(
-                        text = "${car.seatingCapacity} seats",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                Text(
-                    text = car.description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "$${car.rentalPricePerDay}/day",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    
-                    Button(onClick = onClick) {
-                        Text("Book Now")
-                    }
-                }
-            }
         }
     }
 } 

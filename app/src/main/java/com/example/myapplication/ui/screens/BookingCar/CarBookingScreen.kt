@@ -504,72 +504,104 @@ fun CarBookingScreen(
             ) {
                 Button(
                     onClick = { 
-                            // Calculate the rental duration
-                            val diffMillis = viewModel.dropOffCalendar.timeInMillis - viewModel.pickUpCalendar.timeInMillis
-                            val diffDays = TimeUnit.MILLISECONDS.toDays(diffMillis) + 1
+                        // Prevent continue if form is invalid
+                        if (!viewModel.isFormValid()) {
+                            android.widget.Toast.makeText(
+                                context,
+                                "Please select both pick-up and drop-off date and time",
+                                android.widget.Toast.LENGTH_SHORT
+                            ).show()
+                            return@Button
+                        }
+                        // Calculate the rental duration
+                        val diffMillis = viewModel.dropOffCalendar.timeInMillis - viewModel.pickUpCalendar.timeInMillis
+                        val diffDays = TimeUnit.MILLISECONDS.toDays(diffMillis) + 1
+                        
+                        // Calculate driver fees if applicable
+                        val driverFees = if (viewModel.rentType == "With Driver") 1000.00 * diffDays else 0.0
+                        
+                        // Calculate total price
+                        val totalPrice = uiState.carPrice * diffDays + driverFees
+                        
+                        // Log details before updating BookingViewModel
+                        Log.d("CarBookingScreen", "Updating BookingViewModel with details:")
+                        Log.d("CarBookingScreen", "  Car Name: ${uiState.carName}")
+                        Log.d("CarBookingScreen", "  Car Year: ${uiState.carYear}")
+                        Log.d("CarBookingScreen", "  Car Price (from uiState): ${uiState.carPrice}")
+                        Log.d("CarBookingScreen", "  Car Transmission: ${uiState.carTransmission}")
+                        Log.d("CarBookingScreen", "  Car Rating: ${uiState.carRating}")
+                        Log.d("CarBookingScreen", "  Rent Type: ${viewModel.rentType}")
+                        Log.d("CarBookingScreen", "  Pick Up Date: ${viewModel.pickUpDate}")
+                        Log.d("CarBookingScreen", "  Pick Up Time: ${viewModel.pickUpTime}")
+                        Log.d("CarBookingScreen", "  Drop Off Date: ${viewModel.dropOffDate}")
+                        Log.d("CarBookingScreen", "  Drop Off Time: ${viewModel.dropOffTime}")
+                        Log.d("CarBookingScreen", "  Total Days: ${diffDays.toInt()}")
+                        Log.d("CarBookingScreen", "  Calculated Total Price: $totalPrice")
+
+                        // Save booking details to ViewModel
+                        bookingViewModel.updateCarDetails(
+                            name = uiState.carName,
+                            year = uiState.carYear,
+                            price = uiState.carPrice,
+                            transmission = uiState.carTransmission,
+                            rating = uiState.carRating,
+                            rentType = viewModel.rentType,
+                            pickUp = viewModel.pickUpDate,
+                            pickUpT = viewModel.pickUpTime,
+                            dropOff = viewModel.dropOffDate,
+                            dropOffT = viewModel.dropOffTime,
+                            days = diffDays.toInt()
+                        )
+                        
+                        // Set the carId in BookingViewModel
+                        val carIdLong = carId?.toLongOrNull() ?: 0L
+                        Log.d("CarBookingScreen", "  Car ID (for updateCarId): $carIdLong") // Log carIdLong
+                        bookingViewModel.updateCarId(carIdLong)
+                        Log.d("CarBookingScreen", "Updated BookingViewModel carId to $carIdLong")
+                        
+                        if (selectedReservation != null) {
+                            // Handle modification or rebooking
                             
-                            // Calculate driver fees if applicable
-                            val driverFees = if (viewModel.rentType == "With Driver") 1000.00 * diffDays else 0.0
-                            
-                            // Calculate total price
-                            val totalPrice = uiState.carPrice * diffDays + driverFees
-                            
-                            // Save booking details to ViewModel
-                            bookingViewModel.updateCarDetails(
-                                name = uiState.carName,
-                                year = uiState.carYear,
-                                price = uiState.carPrice,
-                                transmission = uiState.carTransmission,
-                                rating = uiState.carRating,
-                                rentType = viewModel.rentType,
-                                pickUp = viewModel.pickUpDate,
-                                pickUpT = viewModel.pickUpTime,
-                                dropOff = viewModel.dropOffDate,
-                                dropOffT = viewModel.dropOffTime,
-                                days = diffDays.toInt()
-                            )
-                            
-                            if (selectedReservation != null) {
-                                // Handle modification or rebooking
-                                val carIdLong = carId?.toLongOrNull() ?: 0L
+                            if (selectedReservation?.status == "COMPLETED") {
+                                // Rebook - create a new reservation
+                                val startDate = dateToLocalDate(viewModel.pickUpCalendar.time)
+                                val endDate = dateToLocalDate(viewModel.dropOffCalendar.time)
                                 
-                                if (selectedReservation?.status == "COMPLETED") {
-                                    // Rebook - create a new reservation
-                                    val startDate = dateToLocalDate(viewModel.pickUpCalendar.time)
-                                    val endDate = dateToLocalDate(viewModel.dropOffCalendar.time)
-                                    
-                                    reservationViewModel.rebookFromPastReservation(
-                                        originalReservationId = selectedReservation!!.id,
-                                        startDate = startDate,
-                                        endDate = endDate
-                                    )
-                                } else {
-                                    // Modify existing reservation
-                                    val startDate = dateToLocalDate(viewModel.pickUpCalendar.time)
-                                    val endDate = dateToLocalDate(viewModel.dropOffCalendar.time)
-                                    
-                                    reservationViewModel.updateReservation(
-                                        reservationId = selectedReservation!!.id,
-                                        startDate = startDate,
-                                        endDate = endDate,
-                                        totalPrice = totalPrice
-                                    )
-                                }
+                                reservationViewModel.rebookFromPastReservation(
+                                    originalReservationId = selectedReservation!!.id,
+                                    startDate = startDate,
+                                    endDate = endDate
+                                )
+                            } else {
+                                // Modify existing reservation
+                                val startDate = dateToLocalDate(viewModel.pickUpCalendar.time)
+                                val endDate = dateToLocalDate(viewModel.dropOffCalendar.time)
                                 
-                                // Clear the selected reservation
-                                reservationViewModel.clearSelectedReservation()
+                                reservationViewModel.updateReservation(
+                                    reservationId = selectedReservation!!.id,
+                                    startDate = startDate,
+                                    endDate = endDate,
+                                    totalPrice = totalPrice
+                                )
                             }
                             
-                            // Continue to next screen
-                            onContinue()
+                            // Clear the selected reservation
+                            reservationViewModel.clearSelectedReservation()
+                        }
+                        
+                        // Continue to next screen
+                        onContinue()
                     },
+                        enabled = viewModel.isFormValid(),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF149459)
+                            containerColor = if (viewModel.isFormValid()) Color(0xFF149459) else Color.Gray,
+                            disabledContainerColor = Color.Gray,
+                            disabledContentColor = Color.White
                         ),
-                        shape = RoundedCornerShape(30.dp),
+                        shape = RoundedCornerShape(20.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                            .height(60.dp)
+                            .height(50.dp)
                 ) {
                     Text(
                             text = buttonText,
