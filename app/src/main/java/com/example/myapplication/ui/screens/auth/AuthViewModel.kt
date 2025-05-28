@@ -7,10 +7,10 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.myapplication.data.api.ApiStatus
+import com.example.myapplication.data.api.RegisterRequest
 import com.example.myapplication.data.auth.FacebookAuthHelper
 import com.example.myapplication.data.auth.GoogleAuthHelper
 import com.example.myapplication.data.repository.AuthRepository
-import com.example.myapplication.utils.PreferenceManager
 import com.facebook.FacebookException
 import com.facebook.login.LoginResult
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
@@ -31,7 +31,7 @@ private const val TAG = "AuthViewModel"
 sealed class AuthUiState {
     object Idle : AuthUiState()
     object Loading : AuthUiState()
-    data class Success(val token: String) : AuthUiState()
+    data class Success(val message: String) : AuthUiState()
     data class Error(val message: String) : AuthUiState()
 }
 
@@ -41,8 +41,7 @@ sealed class AuthUiState {
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val authRepository: AuthRepository,
-    private val preferenceManager: PreferenceManager
+    private val authRepository: AuthRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<AuthUiState>(AuthUiState.Idle)
@@ -108,67 +107,8 @@ class AuthViewModel @Inject constructor(
                 when (result.status) {
                     ApiStatus.SUCCESS -> {
                         result.data?.let { responseData ->
-                            Log.d(TAG, "Login successful, response data type: ${responseData::class.java.name}")
-                            // Handle different possible response formats
-                            val userId = when (responseData) {
-                                is com.example.myapplication.data.api.AuthResponse -> {
-                                    Log.d(TAG, "Response is AuthResponse type with id: ${responseData.id}")
-                                    responseData.id.toString()
-                                }
-                                is Map<*, *> -> {
-                                    val id = (responseData["userId"] ?: responseData["id"])?.toString() ?: "unknown"
-                                    Log.d(TAG, "Response is Map type with userId/id: $id")
-                                    id
-                                }
-                                else -> {
-                                    // Use reflection to try to access properties
-                                    try {
-                                        val userIdField = responseData.javaClass.getDeclaredField("userId")
-                                        userIdField.isAccessible = true
-                                        val id = userIdField.get(responseData)?.toString() ?: "unknown"
-                                        Log.d(TAG, "Response is other type with reflected userId: $id")
-                                        id
-                                    } catch (e: Exception) {
-                                        Log.e(TAG, "Failed to get userId via reflection", e)
-                                        "unknown"
-                                    }
-                                }
-                            }
-                            
-                            val token = when (responseData) {
-                                is com.example.myapplication.data.api.AuthResponse -> {
-                                    Log.d(TAG, "Got token from AuthResponse: ${responseData.token.take(10)}...")
-                                    responseData.token
-                                }
-                                is Map<*, *> -> {
-                                    val tokenStr = responseData["token"]?.toString() ?: ""
-                                    Log.d(TAG, "Got token from Map: ${tokenStr.take(10.coerceAtMost(tokenStr.length))}...")
-                                    tokenStr
-                                }
-                                else -> {
-                                    // Use reflection to try to access properties
-                                    try {
-                                        val tokenField = responseData.javaClass.getDeclaredField("token")
-                                        tokenField.isAccessible = true
-                                        val tokenStr = tokenField.get(responseData)?.toString() ?: ""
-                                        Log.d(TAG, "Got token via reflection: ${tokenStr.take(10.coerceAtMost(tokenStr.length))}...")
-                                        tokenStr
-                                    } catch (e: Exception) {
-                                        Log.e(TAG, "Failed to get token via reflection", e)
-                                        ""
-                                    }
-                                }
-                            }
-                            
-                            // Old preference manager for backward compatibility
-                            preferenceManager.userEmail = email
-                            preferenceManager.isLoggedIn = true
-                            preferenceManager.userId = userId
-                            preferenceManager.authToken = token
-                            
-                            Log.d(TAG, "Saved to preferences - userId: $userId, isLoggedIn: true")
-                            _uiState.value = AuthUiState.Success("email_$userId")
-                            Log.d(TAG, "Set UI state to Success with value: email_$userId")
+                            Log.d(TAG, "Login successful, User ID: ${responseData.userId}")
+                            _uiState.value = AuthUiState.Success("login_success")
                         } ?: run {
                             Log.e(TAG, "Login succeeded but response data is null")
                             _uiState.value = AuthUiState.Error("Login succeeded but no user data returned")
@@ -188,61 +128,32 @@ class AuthViewModel @Inject constructor(
     }
 
     /**
-     * Handle user registration with name, email and password
+     * Handle user registration with first name, last name, email and password
      */
-    fun register(name: String, email: String, password: String, phone: String = "") {
-        if (name.isBlank() || email.isBlank() || password.isBlank()) {
-            _uiState.value = AuthUiState.Error("All fields are required")
+    fun register(firstName: String, lastName: String, email: String, password: String, phone: String = "") {
+        if (firstName.isBlank() || lastName.isBlank() || email.isBlank() || password.isBlank()) {
+            _uiState.value = AuthUiState.Error("All fields (First Name, Last Name, Email, Password) are required")
             return
         }
 
         viewModelScope.launch {
             _uiState.value = AuthUiState.Loading
             
-            authRepository.register(name, email, password, phone).collectLatest { result ->
+            val registerRequest = RegisterRequest(
+                firstName = firstName,
+                lastName = lastName,
+                email = email,
+                phone = phone,
+                password = password
+                // fcmToken can be added here if needed later
+            )
+            
+            authRepository.register(registerRequest).collectLatest { result ->
                 when (result.status) {
                     ApiStatus.SUCCESS -> {
                         result.data?.let { responseData ->
-                            // Handle different possible response formats
-                            val userId = when (responseData) {
-                                is com.example.myapplication.data.api.AuthResponse -> responseData.id.toString()
-                                is Map<*, *> -> (responseData["userId"] ?: responseData["id"])?.toString() ?: "unknown"
-                                else -> {
-                                    // Use reflection to try to access properties
-                                    try {
-                                        val userIdField = responseData.javaClass.getDeclaredField("userId")
-                                        userIdField.isAccessible = true
-                                        userIdField.get(responseData)?.toString() ?: "unknown"
-                                    } catch (e: Exception) {
-                                        "unknown"
-                                    }
-                                }
-                            }
-                            
-                            val token = when (responseData) {
-                                is com.example.myapplication.data.api.AuthResponse -> responseData.token
-                                is Map<*, *> -> responseData["token"]?.toString() ?: ""
-                                else -> {
-                                    // Use reflection to try to access properties
-                                    try {
-                                        val tokenField = responseData.javaClass.getDeclaredField("token")
-                                        tokenField.isAccessible = true
-                                        tokenField.get(responseData)?.toString() ?: ""
-                                    } catch (e: Exception) {
-                                        ""
-                                    }
-                                }
-                            }
-                            
-                            // Old preference manager for backward compatibility
-                            preferenceManager.userName = name
-                            preferenceManager.userEmail = email
-                            preferenceManager.isLoggedIn = true
-                            preferenceManager.userId = userId
-                            preferenceManager.authToken = token
-                            
-                            _uiState.value = AuthUiState.Success("email_$userId")
-                            Log.d(TAG, "User registered successfully: ID $userId")
+                            Log.d(TAG, "Registration successful, User ID: ${responseData.userId}")
+                            _uiState.value = AuthUiState.Success("registration_success")
                         } ?: run {
                             _uiState.value = AuthUiState.Error("Registration succeeded but no user data returned")
                         }
@@ -369,28 +280,16 @@ class AuthViewModel @Inject constructor(
             _uiState.value = AuthUiState.Loading
             
             try {
-                // Attempt to use loginWithFacebook method if it exists
                 authRepository.loginWithFacebook(token).collectLatest { result ->
                     when (result.status) {
                         ApiStatus.SUCCESS -> {
                             result.data?.let { responseData ->
-                                // Handle different possible response formats
                                 val userId = when (responseData) {
-                                    is com.example.myapplication.data.api.AuthResponse -> responseData.id.toString()
-                                    is Map<*, *> -> (responseData["userId"] ?: responseData["id"])?.toString() ?: "unknown"
-                                    else -> {
-                                        // Use reflection to try to access properties
-                                        try {
-                                            val userIdField = responseData.javaClass.getDeclaredField("userId")
-                                            userIdField.isAccessible = true
-                                            userIdField.get(responseData)?.toString() ?: "unknown"
-                                        } catch (e: Exception) {
-                                            "unknown"
-                                        }
-                                    }
+                                    is com.example.myapplication.data.api.AuthResponse -> responseData.userId?.toString() ?: "unknown_fb_user"
+                                    is Map<*, *> -> (responseData["userId"] ?: responseData["id"])?.toString() ?: "unknown_fb_user_map"
+                                    else -> "unknown_fb_user_type"
                                 }
-                                
-                                _uiState.value = AuthUiState.Success("fb_$userId")
+                                _uiState.value = AuthUiState.Success("Login successful for user ID: $userId")
                                 Log.d(TAG, "User logged in with Facebook successfully: ID $userId")
                             } ?: run {
                                 _uiState.value = AuthUiState.Error("Facebook login succeeded but no user data returned")
@@ -426,28 +325,16 @@ class AuthViewModel @Inject constructor(
             _uiState.value = AuthUiState.Loading
             
             try {
-                // Attempt to use loginWithGoogle method if it exists
                 authRepository.loginWithGoogle(token).collectLatest { result ->
                     when (result.status) {
                         ApiStatus.SUCCESS -> {
                             result.data?.let { responseData ->
-                                // Handle different possible response formats
                                 val userId = when (responseData) {
-                                    is com.example.myapplication.data.api.AuthResponse -> responseData.id.toString()
-                                    is Map<*, *> -> (responseData["userId"] ?: responseData["id"])?.toString() ?: "unknown"
-                                    else -> {
-                                        // Use reflection to try to access properties
-                                        try {
-                                            val userIdField = responseData.javaClass.getDeclaredField("userId")
-                                            userIdField.isAccessible = true
-                                            userIdField.get(responseData)?.toString() ?: "unknown"
-                                        } catch (e: Exception) {
-                                            "unknown"
-                                        }
-                                    }
+                                    is com.example.myapplication.data.api.AuthResponse -> responseData.userId?.toString() ?: "unknown_google_user"
+                                    is Map<*, *> -> (responseData["userId"] ?: responseData["id"])?.toString() ?: "unknown_google_user_map"
+                                    else -> "unknown_google_user_type"
                                 }
-                                
-                                _uiState.value = AuthUiState.Success("google_$userId")
+                                _uiState.value = AuthUiState.Success("Login successful for user ID: $userId")
                                 Log.d(TAG, "User logged in with Google successfully: ID $userId")
                             } ?: run {
                                 _uiState.value = AuthUiState.Error("Google login succeeded but no user data returned")
@@ -476,7 +363,6 @@ class AuthViewModel @Inject constructor(
     fun logout() {
         viewModelScope.launch {
             authRepository.logout()
-            preferenceManager.clear()
             _uiState.value = AuthUiState.Idle
         }
     }

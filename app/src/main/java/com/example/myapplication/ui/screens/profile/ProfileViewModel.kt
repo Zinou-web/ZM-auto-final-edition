@@ -11,7 +11,7 @@ import com.example.myapplication.data.api.ApiStatus
 import com.example.myapplication.data.model.User
 import com.example.myapplication.data.repository.UserRepository
 import com.example.myapplication.utils.FileUtil
-import com.example.myapplication.utils.PreferenceManager
+import com.example.myapplication.data.preference.AuthPreferenceManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -37,7 +37,7 @@ sealed class ProfileUiState {
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     private val userRepository: UserRepository,
-    private val preferenceManager: PreferenceManager,
+    private val authPreferenceManager: AuthPreferenceManager,
     private val fileUtil: FileUtil
 ) : ViewModel() {
     
@@ -48,16 +48,22 @@ class ProfileViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<ProfileUiState>(ProfileUiState.Idle)
     val uiState: StateFlow<ProfileUiState> = _uiState
     
-    // For UI state
-    var name = mutableStateOf(preferenceManager.userName ?: "")
-    var email = mutableStateOf(preferenceManager.userEmail ?: "")
+    // For UI input fields - initialized empty, then populated from _user state upon successful load
+    var name = mutableStateOf("")
+    var email = mutableStateOf("")
     var phone = mutableStateOf("")
+    var currentProfileImageUrl = mutableStateOf<String?>(null)
     
-    // Add profile image URI state
-    var profileImageUri by mutableStateOf<Uri?>(null)
+    // For new profile image selection
+    var newProfileImageUri by mutableStateOf<Uri?>(null)
         private set
     
     init {
+        // Initialize from AuthPreferenceManager as a quick display before full load, or rely on loadUserProfile
+        name.value = authPreferenceManager.getUserName() ?: ""
+        email.value = authPreferenceManager.getUserEmail() ?: ""
+        currentProfileImageUrl.value = authPreferenceManager.getUserProfileImage()
+        // Phone is not typically stored in AuthPreferenceManager, so it will be populated by loadUserProfile
         loadUserProfile()
     }
     
@@ -72,10 +78,15 @@ class ProfileViewModel @Inject constructor(
                 .collectLatest { result ->
                     when (result.status) {
                         ApiStatus.SUCCESS -> {
-                            result.data?.let { user ->
-                                _user.value = user
+                            result.data?.let { loadedUser ->
+                                _user.value = loadedUser
+                                // Update mutable states for UI from the loaded User object
+                                name.value = loadedUser.name ?: ""
+                                email.value = loadedUser.email ?: ""
+                                phone.value = loadedUser.phone ?: ""
+                                currentProfileImageUrl.value = loadedUser.profileImage
                                 _uiState.value = ProfileUiState.Success()
-                                Log.d("ProfileViewModel", "Profile loaded successfully: ${user.name}")
+                                Log.d("ProfileViewModel", "Profile loaded successfully: ${loadedUser.name}")
                             } ?: run {
                                 _uiState.value = ProfileUiState.Error("User profile data is null")
                             }
@@ -152,6 +163,13 @@ class ProfileViewModel @Inject constructor(
                                 result.data?.let { imageUrl ->
                                     // Update local user data with new image URL
                                     _user.value = _user.value?.copy(profileImage = imageUrl)
+                                    // Also update the specific UI state for currentProfileImageUrl
+                                    currentProfileImageUrl.value = imageUrl
+                                    // Persist the new image URL through AuthPreferenceManager if desired
+                                    // This assumes profile image URL from upload should be immediately persisted
+                                    // Or, rely on next full profile load/update to get it from backend via User object
+                                    authPreferenceManager.saveUserProfileImage(imageUrl)
+                                    newProfileImageUri = null // Clear selection
                                     _uiState.value = ProfileUiState.Success("Profile image updated")
                                     Log.d("ProfileViewModel", "Profile image uploaded successfully: $imageUrl")
                                 } ?: run {
@@ -246,7 +264,7 @@ class ProfileViewModel @Inject constructor(
     
     // Add method to handle profile image selection
     fun onProfileImageSelected(uri: Uri) {
-        profileImageUri = uri
-        // In a real app, we would upload the image here
+        newProfileImageUri = uri // Changed from profileImageUri to newProfileImageUri
+        // Upload happens via uploadProfileImage(uri) method when user confirms
     }
 }

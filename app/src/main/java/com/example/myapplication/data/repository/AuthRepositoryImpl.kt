@@ -1,5 +1,6 @@
 package com.example.myapplication.data.repository
 
+import android.content.Context
 import android.util.Log
 import com.example.myapplication.BuildConfig
 import com.example.myapplication.data.api.ApiResource
@@ -14,6 +15,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
 import javax.inject.Singleton
+import dagger.hilt.android.qualifiers.ApplicationContext
 
 /**
  * Implementation of the AuthRepository interface.
@@ -21,37 +23,41 @@ import javax.inject.Singleton
 @Singleton
 class AuthRepositoryImpl @Inject constructor(
     private val apiService: ApiService,
-    private val authPreferenceManager: AuthPreferenceManager
+    private val authPreferenceManager: AuthPreferenceManager,
+    @ApplicationContext private val context: Context
 ) : AuthRepository {
     
-    // Use mock data for email/password login when in debug build for testing purposes
-    private val useMockData = BuildConfig.DEBUG
+    private var useMockData = false // Set to true to use mock data
     
     override fun isLoggedIn(): Boolean {
         return authPreferenceManager.getAuthToken() != null
     }
     
-    override fun login(email: String, password: String): Flow<ApiResource<Any>> = flow {
+    override fun login(email: String, password: String): Flow<ApiResource<AuthResponse>> = flow {
         emit(ApiResource(status = ApiStatus.LOADING))
         try {
             if (useMockData) {
                 // Use mock data for testing
                 Log.d("AuthRepository", "Using mock login response instead of calling backend")
                 
-                // Create mock response with a 1-second delay to simulate network request
                 kotlinx.coroutines.delay(1000)
                 val mockResponse = AuthResponse(
-                    id = 1,
-                    userId = 1,
+                    userId = 1L,
                     token = "mock-auth-token-for-testing",
                     email = email,
                     name = "Test User",
-                    success = true
+                    success = true,
+                    emailVerified = true,
+                    profileImageUrl = "https://example.com/default.jpg"
                 )
                 
-                // Store the token
-                authPreferenceManager.saveAuthToken(mockResponse.token)
-                authPreferenceManager.saveUserId(mockResponse.userId.toString())
+                authPreferenceManager.saveAuthToken(mockResponse.token ?: "")
+                authPreferenceManager.saveUserId(mockResponse.userId?.toString() ?: "0")
+                mockResponse.email?.let { authPreferenceManager.saveUserEmail(it) }
+                mockResponse.name?.let { authPreferenceManager.saveUserName(it) }
+                mockResponse.profileImageUrl?.let { authPreferenceManager.saveUserProfileImage(it) }
+                authPreferenceManager.setLoggedIn(true)
+                mockResponse.expiresIn?.let { authPreferenceManager.saveTokenExpiry(it) }
                 
                 emit(ApiResource(status = ApiStatus.SUCCESS, data = mockResponse))
             } else {
@@ -60,11 +66,14 @@ class AuthRepositoryImpl @Inject constructor(
                 val loginRequest = LoginRequest(email, password)
                 val response = apiService.login(loginRequest)
                 
-                // Store the token
-                authPreferenceManager.saveAuthToken(response.token)
-                authPreferenceManager.saveUserId(response.id.toString())
-                
-                emit(ApiResource(status = ApiStatus.SUCCESS, data = response))
+                authPreferenceManager.saveUserId(response.userId?.toString() ?: "0")
+                response.email?.let { authPreferenceManager.saveUserEmail(it) }
+                response.name?.let { authPreferenceManager.saveUserName(it) }
+                response.profileImageUrl?.let { authPreferenceManager.saveUserProfileImage(it) }
+                authPreferenceManager.setLoggedIn(true)
+
+                Log.d("AuthRepository", "Login API call successful for email: $email. User ID: ${response.userId}")
+                emit(ApiResource(status = ApiStatus.SUCCESS, data = response, message = "Login successful"))
             }
         } catch (e: Exception) {
             Log.e("AuthRepository", "Login error: ${e.message}", e)
@@ -72,40 +81,37 @@ class AuthRepositoryImpl @Inject constructor(
         }
     }
     
-    override fun register(name: String, email: String, password: String, phone: String): Flow<ApiResource<Any>> = flow {
+    override fun register(registerRequest: RegisterRequest): Flow<ApiResource<AuthResponse>> = flow {
         emit(ApiResource(status = ApiStatus.LOADING))
         try {
             if (useMockData) {
                 // Use mock data for testing
                 Log.d("AuthRepository", "Using mock registration response instead of calling backend")
                 
-                // Create mock response with a 1-second delay to simulate network request
                 kotlinx.coroutines.delay(1000)
-                val mockResponse = AuthResponse(
-                    id = 1,
-                    userId = 1,
-                    token = "mock-auth-token-for-testing",
-                    email = email,
-                    name = name,
-                    success = true
-                )
+                val mockResponse = createMockAuthResponse(registerRequest.email)
                 
-                // Store the token
-                authPreferenceManager.saveAuthToken(mockResponse.token)
-                authPreferenceManager.saveUserId(mockResponse.userId.toString())
+                authPreferenceManager.saveAuthToken(mockResponse.token ?: "")
+                authPreferenceManager.saveUserId(mockResponse.userId?.toString() ?: "0")
+                mockResponse.email?.let { authPreferenceManager.saveUserEmail(it) }
+                mockResponse.name?.let { authPreferenceManager.saveUserName(it) }
+                mockResponse.profileImageUrl?.let { authPreferenceManager.saveUserProfileImage(it) }
+                authPreferenceManager.setLoggedIn(true)
+                mockResponse.expiresIn?.let { authPreferenceManager.saveTokenExpiry(it) }
                 
                 emit(ApiResource(status = ApiStatus.SUCCESS, data = mockResponse))
             } else {
-                // Use the actual API call
-                Log.d("AuthRepository", "Attempting to register user: $email")
-                val registerRequest = RegisterRequest(name, email, password, phone)
+                // Use the actual API call with the provided RegisterRequest object
                 val response = apiService.register(registerRequest)
                 
-                // Store the token
-                authPreferenceManager.saveAuthToken(response.token)
-                authPreferenceManager.saveUserId(response.id.toString())
-                
-                emit(ApiResource(status = ApiStatus.SUCCESS, data = response))
+                authPreferenceManager.saveUserId(response.userId?.toString() ?: "0")
+                response.email?.let { authPreferenceManager.saveUserEmail(it) }
+                response.name?.let { authPreferenceManager.saveUserName(it) }
+                response.profileImageUrl?.let { authPreferenceManager.saveUserProfileImage(it) }
+                authPreferenceManager.setLoggedIn(true)
+
+                Log.d("AuthRepository", "Registration API call successful for email: ${registerRequest.email}. User ID: ${response.userId}")
+                emit(ApiResource(status = ApiStatus.SUCCESS, data = response, message = "Registration successful"))
             }
         } catch (e: Exception) {
             Log.e("AuthRepository", "Registration error: ${e.message}", e)
@@ -187,31 +193,35 @@ class AuthRepositoryImpl @Inject constructor(
                 // Use mock data for testing
                 Log.d("AuthRepository", "Using mock Facebook login response")
                 
-                // Simulate network delay
                 kotlinx.coroutines.delay(1000)
-                
-                // Create mock response
                 val mockResponse = AuthResponse(
-                    id = 1,
-                    userId = 1,
+                    userId = 1L,
                     token = "mock-fb-auth-token-for-testing",
                     email = "facebook-user@example.com",
                     name = "Facebook User",
-                    success = true
+                    success = true,
+                    emailVerified = true,
+                    profileImageUrl = "https://example.com/fb.jpg"
                 )
                 
-                // Store the token
-                authPreferenceManager.saveAuthToken(mockResponse.token)
-                authPreferenceManager.saveUserId(mockResponse.userId.toString())
+                authPreferenceManager.saveAuthToken(mockResponse.token ?: "")
+                authPreferenceManager.saveUserId(mockResponse.userId?.toString() ?: "0")
+                mockResponse.email?.let { authPreferenceManager.saveUserEmail(it) }
+                mockResponse.name?.let { authPreferenceManager.saveUserName(it) }
+                mockResponse.profileImageUrl?.let { authPreferenceManager.saveUserProfileImage(it) }
+                authPreferenceManager.setLoggedIn(true)
+                mockResponse.expiresIn?.let { authPreferenceManager.saveTokenExpiry(it) }
                 
                 emit(ApiResource(status = ApiStatus.SUCCESS, data = mockResponse))
             } else {
                 // Simulate Facebook login using the OAuth2 redirect endpoint
-                val response = apiService.handleOAuth2Redirect(token, 0) // UserId will be returned by the server
+                val response = apiService.handleOAuth2Redirect(token, 0) // UserId from server
                 
-                // Store the token
-                authPreferenceManager.saveAuthToken(response.token)
-                authPreferenceManager.saveUserId(response.userId.toString())
+                authPreferenceManager.saveUserId(response.userId?.toString() ?: "0")
+                response.email?.let { authPreferenceManager.saveUserEmail(it) }
+                response.name?.let { authPreferenceManager.saveUserName(it) }
+                response.profileImageUrl?.let { authPreferenceManager.saveUserProfileImage(it) }
+                authPreferenceManager.setLoggedIn(true)
                 
                 emit(ApiResource(status = ApiStatus.SUCCESS, data = response))
             }
@@ -227,31 +237,35 @@ class AuthRepositoryImpl @Inject constructor(
                 // Use mock data for testing
                 Log.d("AuthRepository", "Using mock Google login response")
                 
-                // Simulate network delay
                 kotlinx.coroutines.delay(1000)
-                
-                // Create mock response
                 val mockResponse = AuthResponse(
-                    id = 1,
-                    userId = 1,
+                    userId = 1L,
                     token = "mock-google-auth-token-for-testing",
                     email = "google-user@example.com",
                     name = "Google User",
-                    success = true
+                    success = true,
+                    emailVerified = true,
+                    profileImageUrl = "https://example.com/google.jpg"
                 )
                 
-                // Store the token
-                authPreferenceManager.saveAuthToken(mockResponse.token)
-                authPreferenceManager.saveUserId(mockResponse.userId.toString())
+                authPreferenceManager.saveAuthToken(mockResponse.token ?: "")
+                authPreferenceManager.saveUserId(mockResponse.userId?.toString() ?: "0")
+                mockResponse.email?.let { authPreferenceManager.saveUserEmail(it) }
+                mockResponse.name?.let { authPreferenceManager.saveUserName(it) }
+                mockResponse.profileImageUrl?.let { authPreferenceManager.saveUserProfileImage(it) }
+                authPreferenceManager.setLoggedIn(true)
+                mockResponse.expiresIn?.let { authPreferenceManager.saveTokenExpiry(it) }
                 
                 emit(ApiResource(status = ApiStatus.SUCCESS, data = mockResponse))
             } else {
                 // Simulate Google login using the OAuth2 redirect endpoint
-                val response = apiService.handleOAuth2Redirect(token, 0) // UserId will be returned by the server
+                val response = apiService.handleOAuth2Redirect(token, 0) // UserId from server
                 
-                // Store the token
-                authPreferenceManager.saveAuthToken(response.token)
-                authPreferenceManager.saveUserId(response.userId.toString())
+                authPreferenceManager.saveUserId(response.userId?.toString() ?: "0")
+                response.email?.let { authPreferenceManager.saveUserEmail(it) }
+                response.name?.let { authPreferenceManager.saveUserName(it) }
+                response.profileImageUrl?.let { authPreferenceManager.saveUserProfileImage(it) }
+                authPreferenceManager.setLoggedIn(true)
                 
                 emit(ApiResource(status = ApiStatus.SUCCESS, data = response))
             }
@@ -261,6 +275,38 @@ class AuthRepositoryImpl @Inject constructor(
     }
     
     override suspend fun logout() {
+        try {
+            // Call the backend logout endpoint first
+            val response = apiService.logout() // Assumes ApiService has a logout() suspend fun
+            if (response.isSuccessful) {
+                Log.d("AuthRepositoryImpl", "Backend logout successful")
+            } else {
+                // Log error or handle unsuccessful backend logout if needed
+                Log.w("AuthRepositoryImpl", "Backend logout failed or returned error: ${response.code()}")
+            }
+        } catch (e: Exception) {
+            // Log or handle network errors during logout call
+            Log.e("AuthRepositoryImpl", "Error calling backend logout: ${e.message}", e)
+        }
+        // Always clear local data regardless of backend call success
         authPreferenceManager.clearAuthData()
+        authPreferenceManager.setLoggedIn(false) // Ensure loggedIn flag is also cleared
+        Log.d("AuthRepositoryImpl", "Local auth data cleared")
+    }
+
+    private fun createMockAuthResponse(email: String): AuthResponse {
+        // This mock might need adjustment if we want to test firstName/lastName with mock data too.
+        // For now, it only uses email to generate a mock name.
+        val mockName = email.split("@")[0]
+        return AuthResponse(
+            userId = 123L,
+            token = "mock_jwt_token_for_${email}",
+            email = email,
+            name = mockName,
+            expiresIn = 3600L,
+            profileImageUrl = "https://example.com/mockimage.jpg",
+            emailVerified = true,
+            success = true
+        )
     }
 } 

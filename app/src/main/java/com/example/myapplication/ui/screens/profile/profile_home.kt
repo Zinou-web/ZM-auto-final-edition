@@ -159,13 +159,11 @@ fun ProfileScreen(
                 contentAlignment = Alignment.BottomEnd,
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             ) {
-                // Show selected image or default
-                val painter = if (viewModel.profileImageUri != null) {
-                    rememberAsyncImagePainter(
-                        model = viewModel.profileImageUri
-                    )
-                } else {
-                    painterResource(id = R.drawable.account)
+                // Determine what to display: newly selected image, current URL, or placeholder
+                val painter = when {
+                    viewModel.newProfileImageUri != null -> rememberAsyncImagePainter(model = viewModel.newProfileImageUri)
+                    !viewModel.currentProfileImageUrl.value.isNullOrEmpty() -> rememberAsyncImagePainter(model = viewModel.currentProfileImageUrl.value)
+                    else -> painterResource(id = R.drawable.account)
                 }
 
                 Image(

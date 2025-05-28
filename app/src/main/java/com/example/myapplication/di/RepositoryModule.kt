@@ -3,7 +3,6 @@ package com.example.myapplication.di
 import com.example.myapplication.data.api.ApiService
 import com.example.myapplication.data.preference.AuthPreferenceManager
 import com.example.myapplication.data.repository.*
-import com.example.myapplication.utils.PreferenceManager
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn

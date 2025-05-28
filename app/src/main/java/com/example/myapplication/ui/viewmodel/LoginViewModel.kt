@@ -3,6 +3,7 @@ package com.example.myapplication.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.myapplication.data.api.ApiStatus
+import com.example.myapplication.data.api.RegisterRequest
 import com.example.myapplication.data.repository.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,11 +43,19 @@ class LoginViewModel @Inject constructor(
     /**
      * Register a new user
      */
-    fun register(name: String, email: String, password: String, phone: String) {
+    fun register(firstName: String, lastName: String, email: String, password: String, phone: String) {
         viewModelScope.launch {
             _loginState.value = LoginUiState.Loading
             
-            authRepository.register(name, email, password, phone).collectLatest { result ->
+            val registerRequest = RegisterRequest(
+                firstName = firstName,
+                lastName = lastName,
+                email = email,
+                phone = phone,
+                password = password
+            )
+            
+            authRepository.register(registerRequest).collectLatest { result ->
                 _loginState.value = when (result.status) {
                     ApiStatus.SUCCESS -> LoginUiState.RegisterSuccess
                     ApiStatus.ERROR -> LoginUiState.Error(result.message ?: "Unknown error occurred")

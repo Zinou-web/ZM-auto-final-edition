@@ -36,6 +36,8 @@ import java.text.NumberFormat
 import java.util.*
 import kotlin.math.max
 import kotlinx.coroutines.launch
+import okhttp3.JavaNetCookieJar
+import java.net.CookieManager
 
 @Composable
 fun EReceiptScreen(
@@ -560,4 +562,12 @@ fun ReceiptRow(
 @Composable
 fun EReceiptScreenPreview() {
     EReceiptScreen(onBackClick = {})
+}
+
+class TestOkhttp {
+    fun test() {
+        val cookieManager = CookieManager()
+        val cookieJar = JavaNetCookieJar(cookieManager)
+        println(cookieJar)
+    }
 } 

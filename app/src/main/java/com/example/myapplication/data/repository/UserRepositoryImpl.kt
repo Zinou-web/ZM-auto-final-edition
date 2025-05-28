@@ -5,7 +5,7 @@ import com.example.myapplication.data.api.ApiService
 import com.example.myapplication.data.api.ApiStatus
 import com.example.myapplication.data.api.UpdateProfileRequest
 import com.example.myapplication.data.model.User
-import com.example.myapplication.utils.PreferenceManager
+import com.example.myapplication.data.preference.AuthPreferenceManager
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import okhttp3.MultipartBody
@@ -18,13 +18,13 @@ import javax.inject.Singleton
 @Singleton
 class UserRepositoryImpl @Inject constructor(
     private val apiService: ApiService,
-    private val preferenceManager: PreferenceManager
+    private val authPreferenceManager: AuthPreferenceManager
 ) : UserRepository {
     
     override fun getCurrentUser(): Flow<ApiResource<User>> = flow {
         emit(ApiResource(status = ApiStatus.LOADING))
         try {
-            val authToken = preferenceManager.authToken ?: throw IllegalStateException("Not authenticated")
+            val authToken = authPreferenceManager.getAuthToken() ?: throw IllegalStateException("Not authenticated")
             
             val user = apiService.getCurrentUser("Bearer $authToken")
             emit(ApiResource(status = ApiStatus.SUCCESS, data = user))
@@ -36,8 +36,8 @@ class UserRepositoryImpl @Inject constructor(
     override fun updateProfile(name: String, email: String, phone: String): Flow<ApiResource<User>> = flow {
         emit(ApiResource(status = ApiStatus.LOADING))
         try {
-            val authToken = preferenceManager.authToken ?: throw IllegalStateException("Not authenticated")
-            val userId = preferenceManager.userId?.toLongOrNull() ?: throw IllegalStateException("User ID not found")
+            val authToken = authPreferenceManager.getAuthToken() ?: throw IllegalStateException("Not authenticated")
+            val userId = authPreferenceManager.getUserId()?.toLongOrNull() ?: throw IllegalStateException("User ID not found")
             
             val request = UpdateProfileRequest(
                 name = name,
@@ -55,7 +55,7 @@ class UserRepositoryImpl @Inject constructor(
     override fun changePassword(currentPassword: String, newPassword: String): Flow<ApiResource<Boolean>> = flow {
         emit(ApiResource(status = ApiStatus.LOADING))
         try {
-            val authToken = preferenceManager.authToken ?: throw IllegalStateException("Not authenticated")
+            val authToken = authPreferenceManager.getAuthToken() ?: throw IllegalStateException("Not authenticated")
             
             apiService.changePassword(currentPassword, newPassword, "Bearer $authToken")
             emit(ApiResource(status = ApiStatus.SUCCESS, data = true))
@@ -67,7 +67,7 @@ class UserRepositoryImpl @Inject constructor(
     override fun uploadProfileImage(image: MultipartBody.Part): Flow<ApiResource<String>> = flow {
         emit(ApiResource(status = ApiStatus.LOADING))
         try {
-            val authToken = preferenceManager.authToken ?: throw IllegalStateException("Not authenticated")
+            val authToken = authPreferenceManager.getAuthToken() ?: throw IllegalStateException("Not authenticated")
             
             val response = apiService.uploadProfileImage(image, "Bearer $authToken")
             emit(ApiResource(status = ApiStatus.SUCCESS, data = response.url))
@@ -79,11 +79,11 @@ class UserRepositoryImpl @Inject constructor(
     override fun deleteAccount(): Flow<ApiResource<Boolean>> = flow {
         emit(ApiResource(status = ApiStatus.LOADING))
         try {
-            val authToken = preferenceManager.authToken ?: throw IllegalStateException("Not authenticated")
-            val userId = preferenceManager.userId?.toLongOrNull() ?: throw IllegalStateException("User ID not found")
+            val authToken = authPreferenceManager.getAuthToken() ?: throw IllegalStateException("Not authenticated")
+            val userId = authPreferenceManager.getUserId()?.toLongOrNull() ?: throw IllegalStateException("User ID not found")
             
             apiService.deleteAccount(userId, "Bearer $authToken")
-            preferenceManager.clear()
+            authPreferenceManager.clearAuthData()
             emit(ApiResource(status = ApiStatus.SUCCESS, data = true))
         } catch (e: Exception) {
             emit(ApiResource(status = ApiStatus.ERROR, message = e.message ?: "Failed to delete account"))

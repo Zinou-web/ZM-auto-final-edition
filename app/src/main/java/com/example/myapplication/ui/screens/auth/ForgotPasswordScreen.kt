@@ -52,7 +52,7 @@ fun ForgotPasswordScreen(
     LaunchedEffect(uiState) {
         when (uiState) {
             is AuthUiState.Success -> {
-                if ((uiState as AuthUiState.Success).token == "password_reset_requested") {
+                if ((uiState as AuthUiState.Success).message == "password_reset_requested") {
                     Toast.makeText(
                         context,
                         "Password reset instructions sent to your email",

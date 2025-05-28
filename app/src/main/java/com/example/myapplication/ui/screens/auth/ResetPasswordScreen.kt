@@ -94,7 +94,7 @@ fun ResetPasswordScreen(
     LaunchedEffect(uiState) {
         when (uiState) {
             is AuthUiState.Success -> {
-                if ((uiState as AuthUiState.Success).token == "password_reset_success") {
+                if ((uiState as AuthUiState.Success).message == "password_reset_success") {
                     Toast.makeText(
                         context,
                         "Password has been reset successfully",

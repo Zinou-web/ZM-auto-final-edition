@@ -2,7 +2,6 @@ package com.example.myapplication.di
 
 import android.content.Context
 import com.example.myapplication.utils.NetworkStateManager
-import com.example.myapplication.utils.PreferenceManager
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -18,12 +17,6 @@ object AppModule {
     @Singleton
     fun provideContext(@ApplicationContext context: Context): Context {
         return context
-    }
-    
-    @Provides
-    @Singleton
-    fun providePreferenceManager(@ApplicationContext context: Context): PreferenceManager {
-        return PreferenceManager(context)
     }
     
     @Provides

@@ -6,7 +6,6 @@ import android.os.StrictMode
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.example.myapplication.data.preference.AuthPreferenceManager
-import com.example.myapplication.utils.PreferenceManager
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
 import javax.inject.Inject
@@ -16,9 +15,6 @@ open class RentalCarApp : Application(), Configuration.Provider {
     
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
-    
-    @Inject
-    lateinit var preferenceManager: PreferenceManager
     
     @Inject
     lateinit var authPreferenceManager: AuthPreferenceManager
@@ -57,7 +53,10 @@ open class RentalCarApp : Application(), Configuration.Provider {
     private fun migratePreferencesToAuth() {
         // TEMPORARILY DISABLED FOR TESTING AUTH FLOW
         // If user is logged in with old preference system, migrate to new auth system
-        if (false && preferenceManager.isLoggedIn && !authPreferenceManager.isLoggedIn()) {
+        // This block will be ineffective as preferenceManager is being removed.
+        // Consider deleting this migration logic entirely once old PreferenceManager is gone.
+        /*
+        if (false && preferenceManager.isLoggedIn && !authPreferenceManager.isLoggedIn()) { // preferenceManager will be undefined
             preferenceManager.authToken?.let { token ->
                 authPreferenceManager.saveAuthToken(token)
                 preferenceManager.userId?.let { userId ->
@@ -70,10 +69,11 @@ open class RentalCarApp : Application(), Configuration.Provider {
                 Timber.d("Migrated user authentication from old preferences to secure storage")
             }
         }
+        */
 
-        // ADDED: Clear any existing login for testing
-        authPreferenceManager.clearAuthData()
-        Timber.d("Auth data cleared for testing purposes")
+        // REMOVED: authPreferenceManager.clearAuthData()
+        // REMOVED: Timber.d("Auth data cleared for testing purposes")
+        Timber.d("migratePreferencesToAuth called. Migration logic is currently disabled/commented out.")
     }
     
     private fun enableStrictMode() {

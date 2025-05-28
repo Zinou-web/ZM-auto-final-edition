@@ -57,6 +57,9 @@ interface ApiService {
         @Query("newPassword") newPassword: String
     ): PasswordResetResponse
 
+    @POST("api/users/logout")
+    suspend fun logout(): retrofit2.Response<Unit>
+
     @POST("api/users/me/change-password")
     suspend fun changePassword(
         @Query("currentPassword") currentPassword: String,

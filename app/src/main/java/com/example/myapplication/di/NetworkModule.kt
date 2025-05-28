@@ -18,6 +18,9 @@ import okhttp3.ConnectionPool
 import okhttp3.Interceptor
 import okhttp3.Response
 import timber.log.Timber
+import java.net.CookieManager
+import java.net.CookiePolicy
+import okhttp3.JavaNetCookieJar
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -32,7 +35,12 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideOkHttpClient(authInterceptor: AuthInterceptor): OkHttpClient {
+        // Setup CookieManager to accept all cookies for session management
+        val cookieManager = CookieManager()
+        cookieManager.setCookiePolicy(CookiePolicy.ACCEPT_ALL)
+
         val builder = OkHttpClient.Builder()
+            .cookieJar(JavaNetCookieJar(cookieManager))
             .connectTimeout(60, TimeUnit.SECONDS)  // Increased timeout
             .readTimeout(60, TimeUnit.SECONDS)     // Increased timeout
             .writeTimeout(60, TimeUnit.SECONDS)    // Increased timeout

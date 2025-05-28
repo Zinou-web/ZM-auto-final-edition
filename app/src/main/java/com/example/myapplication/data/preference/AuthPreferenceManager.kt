@@ -29,6 +29,8 @@ class AuthPreferenceManager @Inject constructor(
         private const val KEY_TOKEN_EXPIRES = "token_expires"
         private const val KEY_IS_LOGGED_IN = "is_logged_in"
         private const val KEY_USER_EMAIL = "user_email"
+        private const val KEY_USER_NAME = "user_name"
+        private const val KEY_USER_PROFILE_IMAGE = "user_profile_image"
     }
     
     fun saveAuthToken(token: String) {
@@ -65,6 +67,18 @@ class AuthPreferenceManager @Inject constructor(
     
     fun getUserEmail(): String? = sharedPreferences.getString(KEY_USER_EMAIL, null)
     
+    fun saveUserName(userName: String) {
+        sharedPreferences.edit().putString(KEY_USER_NAME, userName).apply()
+    }
+    
+    fun getUserName(): String? = sharedPreferences.getString(KEY_USER_NAME, null)
+    
+    fun saveUserProfileImage(imageUrl: String) {
+        sharedPreferences.edit().putString(KEY_USER_PROFILE_IMAGE, imageUrl).apply()
+    }
+    
+    fun getUserProfileImage(): String? = sharedPreferences.getString(KEY_USER_PROFILE_IMAGE, null)
+    
     fun clearAuthData() {
         sharedPreferences.edit()
             .remove(KEY_AUTH_TOKEN)
@@ -72,6 +86,8 @@ class AuthPreferenceManager @Inject constructor(
             .remove(KEY_TOKEN_EXPIRES)
             .remove(KEY_IS_LOGGED_IN)
             .remove(KEY_USER_EMAIL)
+            .remove(KEY_USER_NAME)
+            .remove(KEY_USER_PROFILE_IMAGE)
             .apply()
     }
 } 

@@ -2,6 +2,10 @@ package com.example.myapplication.data.repository
 
 import com.example.myapplication.data.api.ApiResource
 import kotlinx.coroutines.flow.Flow
+import com.example.myapplication.data.api.AuthResponse
+import com.example.myapplication.data.api.LoginRequest
+import com.example.myapplication.data.api.RegisterRequest
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 
 /**
  * Interface for authentication-related operations.
@@ -15,12 +19,12 @@ interface AuthRepository {
     /**
      * Login with email and password
      */
-    fun login(email: String, password: String): Flow<ApiResource<Any>>
+    fun login(email: String, password: String): Flow<ApiResource<AuthResponse>>
     
     /**
      * Register a new user
      */
-    fun register(name: String, email: String, password: String, phone: String): Flow<ApiResource<Any>>
+    fun register(registerRequest: RegisterRequest): Flow<ApiResource<AuthResponse>>
     
     /**
      * Check if an email exists in the system

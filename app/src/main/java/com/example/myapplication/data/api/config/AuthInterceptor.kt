@@ -6,6 +6,7 @@ import okhttp3.Request
 import okhttp3.Response
 import javax.inject.Inject
 import javax.inject.Singleton
+import timber.log.Timber
 
 @Singleton
 class AuthInterceptor @Inject constructor(
@@ -22,7 +23,10 @@ class AuthInterceptor @Inject constructor(
         
         // Add auth token to requests that need authentication
         val token = authPreferenceManager.getAuthToken()
-        if (token.isNullOrEmpty()) {
+        if (token.isNullOrEmpty() || authPreferenceManager.isTokenExpired()) {
+            if (authPreferenceManager.isTokenExpired()) {
+                Timber.w("Auth token is expired. Proceeding without token.")
+            }
             return chain.proceed(originalRequest)
         }
         
@@ -35,11 +39,28 @@ class AuthInterceptor @Inject constructor(
     }
     
     private fun isPublicEndpoint(request: Request): Boolean {
-        val path = request.url.encodedPath
-        return path.contains("/login") || 
-               path.contains("/register") || 
-               path.contains("/password-reset") ||
-               path.contains("/oauth2") ||
-               (path.contains("/cars") && request.method == "GET")
+        val path = request.url.encodedPath // Example: /api/users/login
+        val method = request.method
+
+        // Exact paths should be relative to the base URL (e.g., /api/users/login)
+        return when {
+            path == "/api/users/login" && method == "POST" -> true
+            path == "/api/users/register" && method == "POST" -> true
+            path == "/api/users/oauth2/check-email" && method == "GET" -> true // from ApiService.kt, assuming GET
+            path == "/api/users/oauth2/redirect" && method == "GET" -> true    // from ApiService.kt, assuming GET
+            path == "/api/users/password-reset/request" && method == "POST" -> true
+            path == "/api/users/password-reset/verify" && method == "POST" -> true
+            
+            // For /api/cars and its subpaths, if they are GET and public
+            // This covers /api/cars, /api/cars/paged, /api/cars/available/paged, /api/cars/brand/{brand}/paged, etc.
+            // and /api/cars/{id} as getCarById does not take a token in ApiService.kt
+            path.startsWith("/api/cars") && method == "GET" -> true
+            
+            // Add any other specific public endpoints here
+            // e.g. if there was a public /api/app-config endpoint
+            // path == "/api/app-config" && method == "GET" -> true 
+
+            else -> false
+        }
     }
 } 
