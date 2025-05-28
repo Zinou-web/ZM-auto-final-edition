@@ -55,4 +55,14 @@ interface AuthRepository {
      * Logout the current user
      */
     suspend fun logout()
+
+    /**
+     * Verify email using the OTP code sent to the user's email
+     */
+    fun verifyEmail(userId: Long, verificationCode: String): Flow<ApiResource<Boolean>>
+
+    /**
+     * Resend the OTP code to the user's email for verification
+     */
+    fun resendOtp(userId: Long): Flow<ApiResource<Boolean>>
 } 

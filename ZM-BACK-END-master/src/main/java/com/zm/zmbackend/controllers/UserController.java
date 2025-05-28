@@ -3,6 +3,7 @@ package com.zm.zmbackend.controllers;
 import com.zm.zmbackend.dto.LoginRequest;
 import com.zm.zmbackend.dto.LoginResponse;
 import com.zm.zmbackend.dto.VerificationRequest;
+import com.zm.zmbackend.dto.UpdateProfileRequest;
 import com.zm.zmbackend.entities.Car;
 import com.zm.zmbackend.entities.Reservation;
 import com.zm.zmbackend.entities.User;
@@ -124,6 +125,9 @@ public class UserController {
 
             User savedUser = userService.createUser(user);
 
+            // Generate and send email verification code
+            userService.generateEmailVerificationCode(savedUser.getId());
+
             // Create authentication object
             UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                 savedUser.getEmail(), null, Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")));
@@ -169,6 +173,17 @@ public class UserController {
         } catch (Exception e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    // Resend OTP endpoint
+    @PostMapping("/{userId}/resend-otp")
+    public ResponseEntity<?> resendOtp(@PathVariable Long userId, HttpServletRequest request) {
+        Long currentUserId = (Long) request.getSession().getAttribute("currentUserId");
+        if (currentUserId == null || !currentUserId.equals(userId)) {
+            return new ResponseEntity<>("Unauthorized", HttpStatus.UNAUTHORIZED);
+        }
+        userService.generateEmailVerificationCode(userId);
+        return new ResponseEntity<>(Map.of("message", "otp_sent"), HttpStatus.OK);
     }
 
     // Phone verification endpoint removed as per requirements
@@ -230,15 +245,33 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestBody User user, 
-                                          HttpServletRequest httpRequest) {
+    public ResponseEntity<User> updateUser(@PathVariable Long id,
+                                           @RequestBody UpdateProfileRequest request,
+                                           HttpServletRequest httpRequest) {
         try {
-            // Get user ID from session
             Long currentUserId = (Long) httpRequest.getSession().getAttribute("currentUserId");
             if (currentUserId == null) {
                 return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
             }
-
+            if (!currentUserId.equals(id)) {
+                return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+            }
+            Optional<User> existingUserOpt = userService.getUserById(id);
+            if (existingUserOpt.isEmpty()) {
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            }
+            User user = existingUserOpt.get();
+            if (request.getName() != null) {
+                String[] parts = request.getName().split(" ", 2);
+                user.setFirstName(parts[0]);
+                user.setLastName(parts.length > 1 ? parts[1] : "");
+            }
+            if (request.getEmail() != null) {
+                user.setEmail(request.getEmail());
+            }
+            if (request.getPhone() != null) {
+                user.setPhoneNumber(request.getPhone());
+            }
             User updatedUser = userService.updateUser(id, user, currentUserId);
             return new ResponseEntity<>(updatedUser, HttpStatus.OK);
         } catch (RuntimeException e) {

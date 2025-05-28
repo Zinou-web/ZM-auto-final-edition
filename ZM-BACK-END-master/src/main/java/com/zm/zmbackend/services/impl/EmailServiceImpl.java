@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
 
 /**
  * Implementation of the EmailService interface.
@@ -13,15 +14,19 @@ import org.springframework.stereotype.Service;
 public class EmailServiceImpl implements EmailService {
 
     private final JavaMailSender emailSender;
+    private final String fromAddress;
 
     @Autowired
-    public EmailServiceImpl(JavaMailSender emailSender) {
+    public EmailServiceImpl(JavaMailSender emailSender,
+                            @Value("${spring.mail.username}") String fromAddress) {
         this.emailSender = emailSender;
+        this.fromAddress = fromAddress;
     }
 
     @Override
     public void sendSimpleMessage(String to, String subject, String text) {
         SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromAddress);
         message.setTo(to);
         message.setSubject(subject);
         message.setText(text);

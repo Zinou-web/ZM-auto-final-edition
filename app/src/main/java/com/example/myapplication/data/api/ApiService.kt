@@ -43,9 +43,16 @@ interface ApiService {
     @POST("api/users/{userId}/verify-email")
     suspend fun verifyEmail(
         @Path("userId") userId: Long,
-        @Query("code") code: String,
-        @Header("Authorization") token: String
+        @Body request: VerificationRequest
     ): String
+
+    /**
+     * Resend the email verification code (OTP)
+     */
+    @POST("api/users/{userId}/resend-otp")
+    suspend fun resendOtp(
+        @Path("userId") userId: Long
+    ): Map<String, String>
 
     @POST("api/users/password-reset/request")
     suspend fun requestPasswordReset(@Query("email") email: String)

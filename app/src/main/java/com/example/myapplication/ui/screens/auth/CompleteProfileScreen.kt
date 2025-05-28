@@ -1,5 +1,6 @@
 package com.example.myapplication.ui.screens.auth
 
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -30,6 +31,13 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.example.myapplication.R
 import com.example.myapplication.ui.theme.poppins
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.ui.platform.LocalContext
+import com.example.myapplication.ui.screens.profile.ProfileViewModel
+import com.example.myapplication.ui.screens.profile.ProfileUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,6 +45,35 @@ fun CompleteProfileScreen(
     onBackClick: () -> Unit = {},
     onProfileCompleted: () -> Unit = {}
 ) {
+    val viewModel: ProfileViewModel = hiltViewModel()
+    val user by viewModel.user.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+
+    // Populate fields when user data is loaded
+    LaunchedEffect(user) {
+        user?.let {
+            val parts = it.name.split(" ")
+            firstName = parts.getOrNull(0) ?: ""
+            lastName = parts.drop(1).joinToString(" ")
+            phoneNumber = it.phone ?: ""
+        }
+    }
+
+    // Handle update result
+    LaunchedEffect(uiState) {
+        when (uiState) {
+            is ProfileUiState.Success -> {
+                onProfileCompleted()
+                Toast.makeText(context, "Profile updated", Toast.LENGTH_SHORT).show()
+            }
+            is ProfileUiState.Error -> {
+                Toast.makeText(context, (uiState as ProfileUiState.Error).message, Toast.LENGTH_SHORT).show()
+            }
+            else -> { /* no-op for Loading, Idle */ }
+        }
+    }
+
     var firstName by remember { mutableStateOf("") }
     var lastName by remember { mutableStateOf("") }
     var phoneNumber by remember { mutableStateOf("") }
@@ -446,7 +483,11 @@ fun CompleteProfileScreen(
                 .padding(start = 24.dp, end = 24.dp, bottom = 24.dp)
         ) {
             Button(
-                onClick = { onProfileCompleted() },
+                onClick = {
+                    // Update profile: combine first and last name
+                    val fullName = "${firstName.trim()} ${lastName.trim()}"
+                    viewModel.updateProfile(fullName, viewModel.email.value, phoneNumber)
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -464,12 +505,17 @@ fun CompleteProfileScreen(
                     letterSpacing = 0.08.sp
                 )
             }
+            // Show loading indicator over button when updating
+            if (uiState is ProfileUiState.Loading) {
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .align(Alignment.CenterEnd),
+                    color = Color.White
+                )
+            }
         }
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun CompleteProfileScreenPreview() {
-    CompleteProfileScreen()
-} 
+// Preview removed due to ViewModel dependencies 

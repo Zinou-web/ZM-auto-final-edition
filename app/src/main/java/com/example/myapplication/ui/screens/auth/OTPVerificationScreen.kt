@@ -1,5 +1,6 @@
 package com.example.myapplication.ui.screens.auth
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,16 +19,19 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.myapplication.ui.theme.poppins
+import com.example.myapplication.ui.viewmodel.OTPViewModel
+import com.example.myapplication.ui.viewmodel.OTPUiState
+import androidx.hilt.navigation.compose.hiltViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,6 +40,10 @@ fun OTPVerificationScreen(
     onVerifySuccess: () -> Unit = {},
     fromForgotPassword: Boolean = false
 ) {
+    val viewModel: OTPViewModel = hiltViewModel()
+    val state by viewModel.state.collectAsState()
+    val context = LocalContext.current
+
     var digit1 by remember { mutableStateOf("") }
     var digit2 by remember { mutableStateOf("") }
     var digit3 by remember { mutableStateOf("") }
@@ -57,6 +65,25 @@ fun OTPVerificationScreen(
         "Please enter the code we just sent to reset\nyour password"
     } else {
         "Please enter the code we just sent to email\nexample@gmail.com"
+    }
+    
+    // Handle UI state changes
+    LaunchedEffect(state) {
+        when (state) {
+            is OTPUiState.VerificationSuccess -> {
+                onVerifySuccess()
+                viewModel.resetState()
+            }
+            is OTPUiState.ResendSuccess -> {
+                Toast.makeText(context, "OTP sent", Toast.LENGTH_SHORT).show()
+                viewModel.resetState()
+            }
+            is OTPUiState.Error -> {
+                Toast.makeText(context, (state as OTPUiState.Error).message, Toast.LENGTH_SHORT).show()
+                viewModel.resetState()
+            }
+            else -> { /* no-op */ }
+        }
     }
     
     Box(
@@ -287,16 +314,16 @@ fun OTPVerificationScreen(
                 textAlign = TextAlign.Center,
                 textDecoration = TextDecoration.Underline,
                 modifier = Modifier
-                    .clickable { /* Resend OTP logic */ }
+                    .clickable { viewModel.resendOtp() }
                     .align(Alignment.CenterHorizontally)
             )
 
             // Verify Button
             Button(
                 onClick = {
-                    // Verify the OTP
-                    if (digit1.isNotEmpty() && digit2.isNotEmpty() && digit3.isNotEmpty() && digit4.isNotEmpty()) {
-                        onVerifySuccess()
+                    val code = digit1 + digit2 + digit3 + digit4
+                    if (code.length == 4) {
+                        viewModel.verifyEmail(code)
                     }
                 },
                 modifier = Modifier
@@ -316,12 +343,15 @@ fun OTPVerificationScreen(
                     fontFamily = poppins
                 )
             }
+
+            if (state is OTPUiState.Loading) {
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .align(Alignment.CenterHorizontally),
+                    color = Color(0xFF149459)
+                )
+            }
         }
     }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun OTPVerificationScreenPreview() {
-    OTPVerificationScreen()
 } 

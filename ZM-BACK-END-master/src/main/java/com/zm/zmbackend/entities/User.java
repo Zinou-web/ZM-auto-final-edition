@@ -34,8 +34,7 @@ public class User {
     @Column(name = "Last_name", nullable = false)
     private String lastName;
 
-    @NotNull
-    @Column(name = "Birthday", nullable = false)
+    @Column(name = "Birthday")
     private LocalDate birthday;
 
     @Size(max = 255)
@@ -43,9 +42,8 @@ public class User {
     @Column(name = "Phone_number", nullable = false)
     private String phoneNumber;
 
-    @NotNull
     @Lob
-    @Column(name = "Address", nullable = false)
+    @Column(name = "Address")
     private String address;
 
     @Size(max = 255)

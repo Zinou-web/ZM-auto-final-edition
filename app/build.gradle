@@ -41,7 +41,7 @@ android {
             buildConfigField "String", "API_BASE_URL", "\"https://api.zmrentals.com/\""
         }
         debug {
-            buildConfigField "String", "API_BASE_URL", "\"https://046e-105-105-223-167.ngrok-free.app/\""
+            buildConfigField "String", "API_BASE_URL", "\"https://f5bb-105-105-105-142.ngrok-free.app/\""
         }
     }
     buildFeatures {

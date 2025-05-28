@@ -10,6 +10,7 @@ import com.example.myapplication.data.api.AuthResponse
 import com.example.myapplication.data.api.LoginRequest
 import com.example.myapplication.data.api.PasswordResetResponse
 import com.example.myapplication.data.api.RegisterRequest
+import com.example.myapplication.data.api.VerificationRequest
 import com.example.myapplication.data.preference.AuthPreferenceManager
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -292,6 +293,27 @@ class AuthRepositoryImpl @Inject constructor(
         authPreferenceManager.clearAuthData()
         authPreferenceManager.setLoggedIn(false) // Ensure loggedIn flag is also cleared
         Log.d("AuthRepositoryImpl", "Local auth data cleared")
+    }
+
+    override fun verifyEmail(userId: Long, verificationCode: String): Flow<ApiResource<Boolean>> = flow {
+        emit(ApiResource(status = ApiStatus.LOADING))
+        try {
+            val request = VerificationRequest(verificationCode)
+            apiService.verifyEmail(userId, request)
+            emit(ApiResource(status = ApiStatus.SUCCESS, data = true))
+        } catch (e: Exception) {
+            emit(ApiResource(status = ApiStatus.ERROR, message = e.message ?: "Verification failed"))
+        }
+    }
+
+    override fun resendOtp(userId: Long): Flow<ApiResource<Boolean>> = flow {
+        emit(ApiResource(status = ApiStatus.LOADING))
+        try {
+            apiService.resendOtp(userId)
+            emit(ApiResource(status = ApiStatus.SUCCESS, data = true))
+        } catch (e: Exception) {
+            emit(ApiResource(status = ApiStatus.ERROR, message = e.message ?: "Resend OTP failed"))
+        }
     }
 
     private fun createMockAuthResponse(email: String): AuthResponse {
