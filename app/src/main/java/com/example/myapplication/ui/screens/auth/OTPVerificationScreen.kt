@@ -10,6 +10,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,6 +26,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -37,48 +41,62 @@ import androidx.hilt.navigation.compose.hiltViewModel
 @Composable
 fun OTPVerificationScreen(
     onBackClick: () -> Unit = {},
-    onVerifySuccess: () -> Unit = {},
+    onVerifySuccess: (String, String) -> Unit = { _, _ -> },
     fromForgotPassword: Boolean = false
 ) {
     val viewModel: OTPViewModel = hiltViewModel()
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
 
+    var otpError by remember { mutableStateOf<String?>(null) }
+
     var digit1 by remember { mutableStateOf("") }
     var digit2 by remember { mutableStateOf("") }
     var digit3 by remember { mutableStateOf("") }
     var digit4 by remember { mutableStateOf("") }
     
-    // Focus requesters for each digit
     val focusRequester1 = remember { FocusRequester() }
     val focusRequester2 = remember { FocusRequester() }
     val focusRequester3 = remember { FocusRequester() }
     val focusRequester4 = remember { FocusRequester() }
     
-    // Calculate top padding based on status bar height
     val topPadding = with(LocalDensity.current) {
         WindowInsets.statusBars.getTop(this).toDp()
     }
     
-    // Message context based on flow
+    // Retrieve email from saved preferences for display
+    val email = viewModel.getUserEmail() ?: ""
+    
     val message = if (fromForgotPassword) {
         "Please enter the code we just sent to reset\nyour password"
     } else {
-        "Please enter the code we just sent to email\nexample@gmail.com"
+        "Please enter the code we just sent to email\n$email"
     }
     
-    // Handle UI state changes
+    // Automatically request OTP when entering the screen (for registration flow)
+    LaunchedEffect(Unit) {
+        if (!fromForgotPassword) {
+            viewModel.resendOtp()
+        }
+        // Pre-focus the first OTP digit field to open keyboard
+        focusRequester1.requestFocus()
+    }
+
     LaunchedEffect(state) {
         when (state) {
             is OTPUiState.VerificationSuccess -> {
-                onVerifySuccess()
+                otpError = null
+                val code = digit1 + digit2 + digit3 + digit4
+                onVerifySuccess(email, code)
                 viewModel.resetState()
             }
             is OTPUiState.ResendSuccess -> {
+                otpError = null
                 Toast.makeText(context, "OTP sent", Toast.LENGTH_SHORT).show()
                 viewModel.resetState()
             }
             is OTPUiState.Error -> {
+                otpError = (state as OTPUiState.Error).message
                 Toast.makeText(context, (state as OTPUiState.Error).message, Toast.LENGTH_SHORT).show()
                 viewModel.resetState()
             }
@@ -289,6 +307,19 @@ fun OTPVerificationScreen(
                 )
             }
             
+            // Display OTP error message if verification failed
+            if (otpError != null) {
+                Text(
+                    text = otpError!!,
+                    color = Color.Red,
+                    fontFamily = poppins,
+                    fontSize = 14.sp,
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .padding(top = 8.dp)
+                )
+            }
+            
             Spacer(modifier = Modifier.height(30.dp))
             
             // Didn't receive OTP text and resend button
@@ -314,7 +345,8 @@ fun OTPVerificationScreen(
                 textAlign = TextAlign.Center,
                 textDecoration = TextDecoration.Underline,
                 modifier = Modifier
-                    .clickable { viewModel.resendOtp() }
+                    .clickable(enabled = state !is OTPUiState.Loading) { viewModel.resendOtp() }
+                    .alpha(if (state is OTPUiState.Loading) 0.5f else 1f)
                     .align(Alignment.CenterHorizontally)
             )
 
@@ -323,9 +355,18 @@ fun OTPVerificationScreen(
                 onClick = {
                     val code = digit1 + digit2 + digit3 + digit4
                     if (code.length == 4) {
-                        viewModel.verifyEmail(code)
+                        if (fromForgotPassword) {
+                            // Bypass API and navigate to NewPassword
+                            onVerifySuccess(email, code)
+                            viewModel.resetState()
+                        } else {
+                            // Standard email verification flow
+                            viewModel.verifyEmail(code)
+                        }
                     }
                 },
+                // Only enable when code is complete and not loading
+                enabled = digit1.isNotEmpty() && digit2.isNotEmpty() && digit3.isNotEmpty() && digit4.isNotEmpty() && state !is OTPUiState.Loading,
                 modifier = Modifier
                     .padding(horizontal = 24.dp, vertical = 32.dp)
                     .fillMaxWidth()
@@ -354,4 +395,4 @@ fun OTPVerificationScreen(
             }
         }
     }
-} 
+}

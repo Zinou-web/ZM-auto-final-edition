@@ -53,6 +53,9 @@ class ProfileViewModel @Inject constructor(
     var email = mutableStateOf("")
     var phone = mutableStateOf("")
     var currentProfileImageUrl = mutableStateOf<String?>(null)
+    // State variables for additional profile details
+    var birthday = mutableStateOf("")
+    var location = mutableStateOf("")
     
     // For new profile image selection
     var newProfileImageUri by mutableStateOf<Uri?>(null)

@@ -51,24 +51,19 @@ fun CreateAccountScreen(
     // Get local context for Toast
     val context = LocalContext.current
     
-    var firstName by remember { mutableStateOf("") }
-    var lastName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
-    var phone by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
     var termsAccepted by remember { mutableStateOf(true) }
     var showTermsDialog by remember { mutableStateOf(false) }
+    var registrationError by remember { mutableStateOf<String?>(null) }
 
     // Error state variables
-    var firstNameError by remember { mutableStateOf<String?>(null) }
-    var lastNameError by remember { mutableStateOf<String?>(null) }
     var emailError by remember { mutableStateOf<String?>(null) }
     var passwordError by remember { mutableStateOf<String?>(null) }
     var confirmPasswordError by remember { mutableStateOf<String?>(null) }
-    var phoneError by remember { mutableStateOf<String?>(null) }
     var termsError by remember { mutableStateOf<String?>(null) }
     
     val uiState by viewModel.uiState.collectAsState()
@@ -76,17 +71,20 @@ fun CreateAccountScreen(
     LaunchedEffect(uiState) {
         val state = uiState
         Log.d("CreateAccountScreen", "UI State changed: $state")
+        // Clear server error on new state
+        registrationError = null
         when (state) {
             is AuthUiState.Success -> {
                 val message = state.message
                 if (message == "registration_success") {
                     Log.d("CreateAccountScreen", "Registration success, navigating to OTP")
-                    onCreateAccountSuccess()
+                onCreateAccountSuccess()
                 }
             }
             is AuthUiState.Error -> {
                 val errorMsg = state.message
                 Log.e("CreateAccountScreen", "Error: $errorMsg")
+                registrationError = errorMsg
             }
             is AuthUiState.Loading -> {
                 Log.d("CreateAccountScreen", "Loading state...")
@@ -105,39 +103,6 @@ fun CreateAccountScreen(
     }
     
     // Validation functions
-    fun validateFirstName(): Boolean {
-        return if (firstName.isBlank()) {
-            firstNameError = "First name is required"
-            false
-        } else {
-            firstNameError = null
-            true
-        }
-    }
-    
-    fun validateLastName(): Boolean {
-        return if (lastName.isBlank()) {
-            lastNameError = "Last name is required"
-            false
-        } else {
-            lastNameError = null
-            true
-        }
-    }
-    
-    fun validatePhone(): Boolean {
-        return if (phone.isBlank()) {
-            phoneError = "Phone number is required"
-            false
-        } else if (!phone.matches(Regex("^\\+?[0-9]{10,13}\$"))) {
-            phoneError = "Enter a valid phone number (e.g., +1234567890 or 0123456789)"
-            false
-        } else {
-            phoneError = null
-            true
-        }
-    }
-    
     fun validateEmail(): Boolean {
         val emailRegex = Regex("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\$")
         return if (email.isBlank()) {
@@ -189,14 +154,11 @@ fun CreateAccountScreen(
     }
     
     fun validateForm(): Boolean {
-        val firstNameValid = validateFirstName()
-        val lastNameValid = validateLastName()
         val emailValid = validateEmail()
-        val phoneValid = validatePhone()
         val passwordValid = validatePassword()
         val confirmPasswordValid = validateConfirmPassword()
         val termsValid = validateTerms()
-        return firstNameValid && lastNameValid && emailValid && phoneValid && passwordValid && confirmPasswordValid && termsValid
+        return emailValid && passwordValid && confirmPasswordValid && termsValid
     }
 
     Box(
@@ -214,200 +176,6 @@ fun CreateAccountScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             CreateAccountTopDecoration()
-            
-            // First Name
-            Text(
-                text = "First Name",
-                fontSize = 18.sp,
-                fontFamily = poppins,
-                fontWeight = FontWeight.Normal,
-                color = Color.Black,
-                letterSpacing = 0.08.sp,
-                modifier = Modifier.align(Alignment.Start)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
-                value = firstName,
-                onValueChange = { 
-                    firstName = it 
-                    if (firstNameError != null) validateFirstName()
-                },
-                placeholder = { Text("Enter your first name",
-                    fontFamily = poppins,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 15.sp,
-                    color = Color.Black.copy(alpha = 0.6f),
-                    letterSpacing = 0.08.sp) },
-                textStyle = androidx.compose.ui.text.TextStyle(
-                    fontFamily = poppins,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 15.sp,
-                    color = Color.Black,
-                    letterSpacing = 0.08.sp
-                ),
-                singleLine = true,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp)
-                    .background(Color.White, RoundedCornerShape(14.dp)),
-                shape = RoundedCornerShape(14.dp),
-                colors = TextFieldDefaults.outlinedTextFieldColors(
-                    focusedBorderColor = Color(0xFFD9D9D9),
-                    unfocusedBorderColor = Color(0xFFD9D9D9),
-                    containerColor = Color.White,
-                    errorBorderColor = Color.Red
-                ),
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Text,
-                    imeAction = ImeAction.Next
-                ),
-                isError = firstNameError != null
-            )
-            
-            if (firstNameError != null) {
-                Text(
-                    text = firstNameError ?: "",
-                    color = Color.Red,
-                    fontFamily = poppins,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 12.sp,
-                    letterSpacing = 0.08.sp,
-                    modifier = Modifier
-                        .align(Alignment.Start)
-                        .padding(start = 4.dp, top = 4.dp)
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            // Last Name
-            Text(
-                text = "Last Name",
-                fontSize = 18.sp,
-                fontFamily = poppins,
-                fontWeight = FontWeight.Normal,
-                color = Color.Black,
-                letterSpacing = 0.08.sp,
-                modifier = Modifier.align(Alignment.Start)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
-                value = lastName,
-                onValueChange = { 
-                    lastName = it 
-                    if (lastNameError != null) validateLastName()
-                },
-                placeholder = { Text("Enter your last name",
-                    fontFamily = poppins,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 15.sp,
-                    color = Color.Black.copy(alpha = 0.6f),
-                    letterSpacing = 0.08.sp) },
-                textStyle = androidx.compose.ui.text.TextStyle(
-                    fontFamily = poppins,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 15.sp,
-                    color = Color.Black,
-                    letterSpacing = 0.08.sp
-                ),
-                singleLine = true,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp)
-                    .background(Color.White, RoundedCornerShape(14.dp)),
-                shape = RoundedCornerShape(14.dp),
-                colors = TextFieldDefaults.outlinedTextFieldColors(
-                    focusedBorderColor = Color(0xFFD9D9D9),
-                    unfocusedBorderColor = Color(0xFFD9D9D9),
-                    containerColor = Color.White,
-                    errorBorderColor = Color.Red
-                ),
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Text,
-                    imeAction = ImeAction.Next
-                ),
-                isError = lastNameError != null
-            )
-            
-            if (lastNameError != null) {
-                Text(
-                    text = lastNameError ?: "",
-                    color = Color.Red,
-                    fontFamily = poppins,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 12.sp,
-                    letterSpacing = 0.08.sp,
-                    modifier = Modifier
-                        .align(Alignment.Start)
-                        .padding(start = 4.dp, top = 4.dp)
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            // Phone Number
-            Text(
-                text = "Phone Number",
-                fontSize = 18.sp,
-                fontFamily = poppins,
-                fontWeight = FontWeight.Normal,
-                color = Color.Black,
-                letterSpacing = 0.08.sp,
-                modifier = Modifier.align(Alignment.Start)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
-                value = phone,
-                onValueChange = { 
-                    phone = it 
-                    if (phoneError != null) validatePhone()
-                },
-                placeholder = { Text("Enter your phone number",
-                    fontFamily = poppins,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 15.sp,
-                    color = Color.Black.copy(alpha = 0.6f),
-                    letterSpacing = 0.08.sp) },
-                textStyle = androidx.compose.ui.text.TextStyle(
-                    fontFamily = poppins,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 15.sp,
-                    color = Color.Black,
-                    letterSpacing = 0.08.sp
-                ),
-                singleLine = true,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp)
-                    .background(Color.White, RoundedCornerShape(14.dp)),
-                shape = RoundedCornerShape(14.dp),
-                colors = TextFieldDefaults.outlinedTextFieldColors(
-                    focusedBorderColor = Color(0xFFD9D9D9),
-                    unfocusedBorderColor = Color(0xFFD9D9D9),
-                    containerColor = Color.White,
-                    errorBorderColor = Color.Red
-                ),
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Phone,
-                    imeAction = ImeAction.Next
-                ),
-                isError = phoneError != null
-            )
-            
-            if (phoneError != null) {
-                Text(
-                    text = phoneError ?: "",
-                    color = Color.Red,
-                    fontFamily = poppins,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 12.sp,
-                    letterSpacing = 0.08.sp,
-                    modifier = Modifier
-                        .align(Alignment.Start)
-                        .padding(start = 4.dp, top = 4.dp)
-                )
-            }
-            Spacer(modifier = Modifier.height(16.dp)) // Space after Phone Number
             
             // Email
             Text(
@@ -682,21 +450,37 @@ fun CreateAccountScreen(
             }
             
             Spacer(modifier = Modifier.height(15.dp))
+            // Display server-side registration error
+            if (registrationError != null) {
+                Text(
+                    text = registrationError ?: "",
+                    color = Color.Red,
+                    fontFamily = poppins,
+                    fontSize = 14.sp,
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .padding(vertical = 4.dp)
+                )
+            }
             // Create Account Button
             Button(
                 onClick = {
                     if (validateForm()) {
-                        // Only attempt registration if all validations pass
+                        // Only attempt registration with email & password; name and phone collected later
                         viewModel.register(
-                            firstName = firstName,
-                            lastName = lastName,
+                            firstName = "",
+                            lastName = "",
                             email = email,
-                            phone = phone,
                             password = password
                         )
                     }
                 },
-                enabled = uiState !is AuthUiState.Loading,
+                // Only enable when not loading and no field errors
+                enabled = uiState !is AuthUiState.Loading
+                    && emailError == null
+                    && passwordError == null
+                    && confirmPasswordError == null
+                    && termsError == null,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(60.dp)

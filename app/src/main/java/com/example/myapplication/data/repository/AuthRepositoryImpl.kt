@@ -31,7 +31,8 @@ class AuthRepositoryImpl @Inject constructor(
     private var useMockData = false // Set to true to use mock data
     
     override fun isLoggedIn(): Boolean {
-        return authPreferenceManager.getAuthToken() != null
+        // Use the logged-in flag to determine session state
+        return authPreferenceManager.isLoggedIn()
     }
     
     override fun login(email: String, password: String): Flow<ApiResource<AuthResponse>> = flow {
@@ -105,6 +106,10 @@ class AuthRepositoryImpl @Inject constructor(
                 // Use the actual API call with the provided RegisterRequest object
                 val response = apiService.register(registerRequest)
                 
+                // Save authentication token and expiry for subsequent API calls
+                authPreferenceManager.saveAuthToken(response.token ?: "")
+                response.expiresIn?.let { authPreferenceManager.saveTokenExpiry(it) }
+
                 authPreferenceManager.saveUserId(response.userId?.toString() ?: "0")
                 response.email?.let { authPreferenceManager.saveUserEmail(it) }
                 response.name?.let { authPreferenceManager.saveUserName(it) }
@@ -299,8 +304,13 @@ class AuthRepositoryImpl @Inject constructor(
         emit(ApiResource(status = ApiStatus.LOADING))
         try {
             val request = VerificationRequest(verificationCode)
-            apiService.verifyEmail(userId, request)
-            emit(ApiResource(status = ApiStatus.SUCCESS, data = true))
+            val response = apiService.verifyEmail(userId, request)
+            if (response.isSuccessful) {
+                emit(ApiResource(status = ApiStatus.SUCCESS, data = true))
+            } else {
+                val error = response.errorBody()?.string()
+                emit(ApiResource(status = ApiStatus.ERROR, message = error ?: "Verification failed with code ${response.code()}"))
+            }
         } catch (e: Exception) {
             emit(ApiResource(status = ApiStatus.ERROR, message = e.message ?: "Verification failed"))
         }
@@ -309,8 +319,13 @@ class AuthRepositoryImpl @Inject constructor(
     override fun resendOtp(userId: Long): Flow<ApiResource<Boolean>> = flow {
         emit(ApiResource(status = ApiStatus.LOADING))
         try {
-            apiService.resendOtp(userId)
-            emit(ApiResource(status = ApiStatus.SUCCESS, data = true))
+            val response = apiService.resendOtp(userId)
+            if (response.isSuccessful) {
+                emit(ApiResource(status = ApiStatus.SUCCESS, data = true))
+            } else {
+                val error = response.errorBody()?.string()
+                emit(ApiResource(status = ApiStatus.ERROR, message = error ?: "Resend OTP failed with code ${response.code()}"))
+            }
         } catch (e: Exception) {
             emit(ApiResource(status = ApiStatus.ERROR, message = e.message ?: "Resend OTP failed"))
         }

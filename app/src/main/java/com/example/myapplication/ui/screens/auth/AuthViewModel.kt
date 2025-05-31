@@ -131,8 +131,9 @@ class AuthViewModel @Inject constructor(
      * Handle user registration with first name, last name, email and password
      */
     fun register(firstName: String, lastName: String, email: String, password: String, phone: String = "") {
-        if (firstName.isBlank() || lastName.isBlank() || email.isBlank() || password.isBlank()) {
-            _uiState.value = AuthUiState.Error("All fields (First Name, Last Name, Email, Password) are required")
+        // Only email and password are required here; firstName and lastName collected later
+        if (email.isBlank() || password.isBlank()) {
+            _uiState.value = AuthUiState.Error("Email and Password are required")
             return
         }
 
@@ -432,5 +433,12 @@ class AuthViewModel @Inject constructor(
                 Log.e(TAG, "Password reset method not available", e)
             }
         }
+    }
+
+    /**
+     * Reset the UI state to Idle. Useful for composables to clear previous states.
+     */
+    fun resetState() {
+        _uiState.value = AuthUiState.Idle
     }
 }

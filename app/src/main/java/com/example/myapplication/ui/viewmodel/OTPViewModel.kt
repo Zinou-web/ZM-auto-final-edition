@@ -79,9 +79,35 @@ class OTPViewModel @Inject constructor(
     }
 
     /**
+     * Verify password reset code and update password
+     */
+    fun verifyPasswordReset(code: String, newPassword: String) {
+        val email = authPreferenceManager.getUserEmail()
+        if (email.isNullOrEmpty()) {
+            _state.value = OTPUiState.Error("User email not found")
+            return
+        }
+        viewModelScope.launch {
+            _state.value = OTPUiState.Loading
+            authRepository.verifyPasswordReset(email, code, newPassword).collectLatest { result ->
+                _state.value = when (result.status) {
+                    ApiStatus.SUCCESS -> OTPUiState.VerificationSuccess
+                    ApiStatus.ERROR -> OTPUiState.Error(result.message ?: "Password reset failed")
+                    ApiStatus.LOADING -> OTPUiState.Loading
+                }
+            }
+        }
+    }
+
+    /**
      * Reset the UI state to initial
      */
     fun resetState() {
         _state.value = OTPUiState.Initial
     }
+
+    /**
+     * Get current user's email from preferences
+     */
+    fun getUserEmail(): String? = authPreferenceManager.getUserEmail()
 } 

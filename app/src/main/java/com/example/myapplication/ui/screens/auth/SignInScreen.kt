@@ -59,6 +59,8 @@ fun SignInScreen(
     onNavigateToGoogleTest: () -> Unit = {},
     socialViewModel: SocialLoginViewModel = hiltViewModel()
 ) {
+    // Track server-side login error
+    var loginError by remember { mutableStateOf<String?>(null) }
     android.util.Log.d(TAG, "SignInScreen composable is being entered")
     
     val context = LocalContext.current
@@ -159,16 +161,20 @@ fun SignInScreen(
         when (socialLoginState) {
             is SocialLoginUiState.Success -> {
                 isLoading = false
+                // Clear any previous login error
+                loginError = null
                 onSignInSuccess()
                 socialViewModel.resetState()
             }
             is SocialLoginUiState.Error -> {
                 isLoading = false
                 val errorMessage = (socialLoginState as SocialLoginUiState.Error).message
+                // Show toast for feedback
                 Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
-                
-                // Set Google initialization error if it's related to Google Sign-In
-                if (errorMessage.contains("Google") || errorMessage.contains("sign-in")) {
+                // Capture inline login error
+                loginError = errorMessage
+                // Retain Google-specific error handling
+                if (errorMessage.contains("Google", ignoreCase = true) || errorMessage.contains("sign-in", ignoreCase = true)) {
                     googleSignInError = errorMessage
                 }
             }
@@ -435,11 +441,10 @@ fun SignInScreen(
             // Sign In Button
             Button(
                 onClick = {
-                    if (validateForm()) {
-                        socialViewModel.loginWithEmail(email, password)
-                    }
+                    socialViewModel.loginWithEmail(email, password)
                 },
-                enabled = !isLoading && email.isNotBlank() && password.isNotBlank(),
+                // Only enable when not loading and no field errors
+                enabled = !isLoading && emailError == null && passwordError == null,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(60.dp)
@@ -465,6 +470,19 @@ fun SignInScreen(
                         letterSpacing = 0.08.sp
                     )
                 }
+            }
+            
+            // Display login error inline
+            if (loginError != null) {
+                Text(
+                    text = loginError ?: "",
+                    color = Color.Red,
+                    fontFamily = poppins,
+                    fontSize = 12.sp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, top = 8.dp)
+                )
             }
             
             Spacer(modifier = Modifier.height(24.dp))

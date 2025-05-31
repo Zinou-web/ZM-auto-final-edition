@@ -51,7 +51,6 @@ import com.example.myapplication.ui.screens.BookingCar.CarBookingScreen
 import com.example.myapplication.ui.screens.password.ChangePasswordScreen
 import com.example.myapplication.ui.screens.auth.OTPVerificationScreen
 import com.example.myapplication.ui.screens.auth.ForgotPasswordScreen
-import com.example.myapplication.ui.screens.auth.ResetPasswordScreen
 import com.example.myapplication.ui.screens.home.CompleteYourBookingScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.data.preference.AuthPreferenceManager
@@ -259,52 +258,16 @@ fun NavGraph(
         composable(AppScreen.ForgotPassword.name) {
             ForgotPasswordScreen(
                 onBack = { navController.popBackStack() },
-                onResetSent = { 
-                    // Navigate to reset password screen
-                    navController.navigate("${AppScreen.ResetPassword.name}") {
+                onResetSent = { email ->
+                    // Navigate to OTP verification for password reset
+                    navController.navigate("${AppScreen.OTPVerification.name}?fromForgotPassword=true") {
                         popUpTo(AppScreen.ForgotPassword.name) { inclusive = true }
                     }
                 }
             )
         }
 
-        composable(
-            route = "${AppScreen.ResetPassword.name}?email={email}",
-            arguments = listOf(
-                navArgument("email") {
-                    type = NavType.StringType
-                    defaultValue = ""
-                }
-            )
-        ) { backStackEntry ->
-            val email = backStackEntry.arguments?.getString("email") ?: ""
-            
-            ResetPasswordScreen(
-                email = email,
-                onBack = { navController.popBackStack() },
-                onResetSuccess = { 
-                    // Navigate to sign in screen after successful password reset
-                    navController.navigate(AppScreen.SignIn.name) {
-                        popUpTo(AppScreen.ResetPassword.name) { inclusive = true }
-                    }
-                }
-            )
-        }
-
-        composable(AppScreen.NewPassword.name) {
-            NewPasswordScreen(
-                onBackClick = { navController.popBackStack() },
-                onPasswordResetSuccess = { navController.navigate(AppScreen.SignIn.name) }
-            )
-        }
-
-        composable(AppScreen.CompleteProfile.name) {
-            CompleteProfileScreen(
-                onBackClick = { navController.popBackStack() },
-                onProfileCompleted = { navController.navigateAndClear(AppScreen.Home.name) }
-            )
-        }
-
+        // After OTP on forgot-password, navigate to NewPassword screen
         composable(
             route = "${AppScreen.OTPVerification.name}?fromForgotPassword={fromForgotPassword}",
             arguments = listOf(
@@ -315,17 +278,42 @@ fun NavGraph(
             )
         ) { backStackEntry ->
             val fromForgotPassword = backStackEntry.arguments?.getBoolean("fromForgotPassword") ?: false
+            val context = LocalContext.current
+            // Retrieve email for building routes
+            val emailPref = AuthPreferenceManager(context)
+            val userEmail = emailPref.getUserEmail() ?: ""
             
             OTPVerificationScreen(
                 onBackClick = { navController.popBackStack() },
-                onVerifySuccess = { 
+                onVerifySuccess = { email, code ->
                     if (fromForgotPassword) {
-                        navController.navigate(AppScreen.NewPassword.name)
+                        // Navigate to NewPassword with email & code
+                        navController.navigate("${AppScreen.NewPassword.name}?email=${email}&code=${code}") {
+                            popUpTo(AppScreen.OTPVerification.name) { inclusive = true }
+                        }
                     } else {
                         navController.navigate(AppScreen.CompleteProfile.name)
                     }
                 },
                 fromForgotPassword = fromForgotPassword
+            )
+        }
+
+        // NewPassword screen takes email and code as navigation arguments
+        composable(
+            route = "${AppScreen.NewPassword.name}?email={email}&code={code}",
+            arguments = listOf(
+                navArgument("email") { type = NavType.StringType; defaultValue = "" },
+                navArgument("code") { type = NavType.StringType; defaultValue = "" }
+            )
+        ) { backStackEntry ->
+            val email = backStackEntry.arguments?.getString("email") ?: ""
+            val code = backStackEntry.arguments?.getString("code") ?: ""
+            NewPasswordScreen(
+                email = email,
+                code = code,
+                onBackClick = { navController.popBackStack() },
+                onPasswordResetSuccess = { navController.navigate(AppScreen.SignIn.name) }
             )
         }
 

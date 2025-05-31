@@ -50,12 +50,23 @@ fun CompleteProfileScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
+    // State variables
+    var firstName by remember { mutableStateOf("") }
+    var lastName by remember { mutableStateOf("") }
+    var phoneNumber by remember { mutableStateOf("") }
+    var birthday by remember { mutableStateOf("") }
+    var location by remember { mutableStateOf("") }
+    
+    val scrollState = rememberScrollState()
+
     // Populate fields when user data is loaded
     LaunchedEffect(user) {
         user?.let {
-            val parts = it.name.split(" ")
+            // Safely split full name into first and last, default to empty if name is null
+            val fullName = it.name.orEmpty()
+            val parts = fullName.split(" ")
             firstName = parts.getOrNull(0) ?: ""
-            lastName = parts.drop(1).joinToString(" ")
+            lastName = parts.drop(1).joinToString(" ").trim()
             phoneNumber = it.phone ?: ""
         }
     }
@@ -64,8 +75,12 @@ fun CompleteProfileScreen(
     LaunchedEffect(uiState) {
         when (uiState) {
             is ProfileUiState.Success -> {
-                onProfileCompleted()
-                Toast.makeText(context, "Profile updated", Toast.LENGTH_SHORT).show()
+                // Only navigate on update success (data contains a message), ignore initial load
+                val message = (uiState as ProfileUiState.Success).data as? String
+                if (!message.isNullOrEmpty()) {
+                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                    onProfileCompleted()
+                }
             }
             is ProfileUiState.Error -> {
                 Toast.makeText(context, (uiState as ProfileUiState.Error).message, Toast.LENGTH_SHORT).show()
@@ -73,14 +88,6 @@ fun CompleteProfileScreen(
             else -> { /* no-op for Loading, Idle */ }
         }
     }
-
-    var firstName by remember { mutableStateOf("") }
-    var lastName by remember { mutableStateOf("") }
-    var phoneNumber by remember { mutableStateOf("") }
-    var birthday by remember { mutableStateOf("") }
-    var location by remember { mutableStateOf("") }
-    
-    val scrollState = rememberScrollState()
 
     Box(
         modifier = Modifier
@@ -484,9 +491,13 @@ fun CompleteProfileScreen(
         ) {
             Button(
                 onClick = {
-                    // Update profile: combine first and last name
+                    // Update viewModel before submitting
                     val fullName = "${firstName.trim()} ${lastName.trim()}"
-                    viewModel.updateProfile(fullName, viewModel.email.value, phoneNumber)
+                    viewModel.name.value = fullName
+                    viewModel.phone.value = phoneNumber
+                    viewModel.birthday.value = birthday
+                    viewModel.location.value = location
+                    viewModel.updateProfile()
                 },
                 modifier = Modifier
                     .fillMaxWidth()

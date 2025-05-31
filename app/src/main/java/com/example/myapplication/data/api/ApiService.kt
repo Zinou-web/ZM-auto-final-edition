@@ -7,6 +7,7 @@ import com.example.myapplication.data.model.Reservation
 import com.example.myapplication.data.model.User
 import okhttp3.MultipartBody
 import retrofit2.http.*
+import retrofit2.Response
 
 interface ApiService {
     // User Profile
@@ -40,11 +41,14 @@ interface ApiService {
     @POST("api/users/register")
     suspend fun register(@Body request: RegisterRequest): AuthResponse
 
+    /**
+     * Verify email using the OTP code sent to the user's email
+     */
     @POST("api/users/{userId}/verify-email")
     suspend fun verifyEmail(
         @Path("userId") userId: Long,
         @Body request: VerificationRequest
-    ): String
+    ): Response<Void>
 
     /**
      * Resend the email verification code (OTP)
@@ -52,7 +56,7 @@ interface ApiService {
     @POST("api/users/{userId}/resend-otp")
     suspend fun resendOtp(
         @Path("userId") userId: Long
-    ): Map<String, String>
+    ): Response<Map<String, String>>
 
     @POST("api/users/password-reset/request")
     suspend fun requestPasswordReset(@Query("email") email: String)

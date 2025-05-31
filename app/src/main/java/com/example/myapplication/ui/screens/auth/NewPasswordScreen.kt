@@ -1,5 +1,6 @@
 package com.example.myapplication.ui.screens.auth
 
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -16,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -27,13 +29,38 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.myapplication.ui.theme.poppins
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.myapplication.ui.screens.auth.AuthViewModel
+import com.example.myapplication.ui.screens.auth.AuthUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewPasswordScreen(
+    email: String,
+    code: String,
     onBackClick: () -> Unit = {},
-    onPasswordResetSuccess: () -> Unit = {}
+    onPasswordResetSuccess: () -> Unit = {},
+    viewModel: AuthViewModel = hiltViewModel()
 ) {
+    val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+
+    LaunchedEffect(uiState) {
+        when (uiState) {
+            is AuthUiState.Success -> {
+                if ((uiState as AuthUiState.Success).message == "password_reset_success") {
+                    Toast.makeText(context, "Password reset successfully", Toast.LENGTH_LONG).show()
+                    onPasswordResetSuccess()
+                    viewModel.resetState()
+                }
+            }
+            is AuthUiState.Error -> {
+                Toast.makeText(context, (uiState as AuthUiState.Error).message, Toast.LENGTH_LONG).show()
+            }
+            else -> {}
+        }
+    }
+
     var newPassword by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var newPasswordVisible by remember { mutableStateOf(false) }
@@ -337,23 +364,35 @@ fun NewPasswordScreen(
             Button(
                 onClick = { 
                     if (validateForm()) {
-                        onPasswordResetSuccess()
+                        viewModel.resetPassword(email, code, newPassword)
                     }
                 },
+                // Only enable when not loading and no field errors
+                enabled = uiState !is AuthUiState.Loading
+                    && newPasswordError == null
+                    && confirmPasswordError == null,
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF149459)),
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp)
+                    .height(60.dp)
             ) {
-                Text(
-                    "Create new password",
-                    color = Color.White,
-                    fontSize = 18.sp,
-                    fontFamily = poppins,
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 0.08.sp
-                )
+                if (uiState is AuthUiState.Loading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = Color.White,
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text(
+                        "Reset Password",
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontFamily = poppins,
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = 0.08.sp
+                    )
+                }
             }
         }
     }
@@ -362,5 +401,5 @@ fun NewPasswordScreen(
 @Preview(showBackground = true)
 @Composable
 fun NewPasswordScreenPreview() {
-    NewPasswordScreen()
+    NewPasswordScreen("email@example.com", "code123")
 } 

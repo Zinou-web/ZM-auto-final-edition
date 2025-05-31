@@ -25,7 +25,7 @@ import com.example.myapplication.ui.theme.poppins
 @Composable
 fun ForgotPasswordScreen(
     onBack: () -> Unit = {},
-    onResetSent: () -> Unit = {},
+    onResetSent: (String) -> Unit = {},
     viewModel: AuthViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
@@ -58,7 +58,7 @@ fun ForgotPasswordScreen(
                         "Password reset instructions sent to your email",
                         Toast.LENGTH_LONG
                     ).show()
-                    onResetSent()
+                    onResetSent(email)
                 }
             }
             is AuthUiState.Error -> {
@@ -89,7 +89,11 @@ fun ForgotPasswordScreen(
                     .padding(vertical = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onBack) {
+                IconButton(onClick = {
+                    // Clear stale errors when going back
+                    emailError = null
+                    onBack()
+                }) {
                     Icon(
                         imageVector = Icons.Default.ArrowBack,
                         contentDescription = "Back",
@@ -199,7 +203,8 @@ fun ForgotPasswordScreen(
                         viewModel.requestPasswordReset(email)
                     }
                 },
-                enabled = uiState !is AuthUiState.Loading,
+                // Only enable when not loading and email is valid
+                enabled = uiState !is AuthUiState.Loading && email.isNotBlank() && emailError == null,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(60.dp)

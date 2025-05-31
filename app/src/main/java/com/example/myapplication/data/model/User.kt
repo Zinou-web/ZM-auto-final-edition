@@ -2,7 +2,7 @@ package com.example.myapplication.data.model
 
 data class User(
     val id: Long,
-    val name: String,
+    val name: String? = null,
     val email: String,
     val phone: String? = null,
     val profileImage: String? = null,
