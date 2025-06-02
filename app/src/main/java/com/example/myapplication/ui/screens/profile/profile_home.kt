@@ -41,6 +41,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.compose.runtime.collectAsState
+import coil.compose.AsyncImage
+import androidx.compose.ui.draw.alpha
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,6 +58,7 @@ fun ProfileScreen(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     val view = LocalView.current
+    val user by viewModel.user.collectAsState()
 
     // Configure window insets
     DisposableEffect(view) {
@@ -165,6 +169,8 @@ fun ProfileScreen(
                     !viewModel.currentProfileImageUrl.value.isNullOrEmpty() -> rememberAsyncImagePainter(model = viewModel.currentProfileImageUrl.value)
                     else -> painterResource(id = R.drawable.account)
                 }
+                // Flag to know if we have a user image
+                val hasImage = viewModel.newProfileImageUri != null || !viewModel.currentProfileImageUrl.value.isNullOrEmpty()
 
                 Image(
                     painter = painter,
@@ -173,6 +179,7 @@ fun ProfileScreen(
                     modifier = Modifier
                         .size(140.dp)
                         .clip(CircleShape)
+                        .alpha(if (hasImage) 1f else 0.5f)
                         .clickable { imagePickerLauncher.launch("image/*") }
                 )
 

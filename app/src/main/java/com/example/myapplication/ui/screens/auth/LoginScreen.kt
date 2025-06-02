@@ -23,6 +23,7 @@ import kotlinx.coroutines.launch
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.ComponentActivity
+import android.widget.Toast
 
 private const val TAG = "LoginScreen"
 
@@ -216,7 +217,7 @@ fun LoginScreen(
                         }
                     }
                 },
-                onFacebookClick = { /* Handle Facebook login */ },
+                onFacebookClick = { Toast.makeText(context, "Facebook login coming soon", Toast.LENGTH_SHORT).show() },
                 isGoogleInitialized = isGoogleInitialized
             )
             

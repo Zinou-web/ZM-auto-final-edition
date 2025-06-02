@@ -48,6 +48,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.material.icons.filled.SearchOff
 import com.example.myapplication.ui.screens.home.FavoriteViewModel
+import coil.compose.AsyncImage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -1143,9 +1144,14 @@ fun CarItem(
                     Box(
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        // Car Image
-                        Image(
-                            painter = painterResource(id = R.drawable.car_placeholder),
+                        // Car Image: use a custom popular image for i10 (ID 11), otherwise load car.picture
+                        val popularImage = if (car.id == 11L) {
+                            "android.resource://com.example.myapplication/drawable/mostpopularcars_i10"
+                        } else null
+                        AsyncImage(
+                            model = popularImage ?: car.picture,
+                            placeholder = painterResource(id = R.drawable.car_placeholder),
+                            error = painterResource(id = R.drawable.car_placeholder),
                             contentDescription = "${car.brand} ${car.model}",
                             contentScale = ContentScale.Fit,
                             modifier = Modifier.fillMaxSize()
@@ -1532,9 +1538,14 @@ fun PopularCarItem(
                     )
             )
             
-            // Car Image
-            Image(
-                painter = painterResource(id = R.drawable.car_placeholder),
+            // Car Image: use a custom popular image for i10 (ID 11), otherwise load car.picture
+            val popularImage = if (car.id == 11L) {
+                "android.resource://com.example.myapplication/drawable/mostpopularcars_i10"
+            } else null
+            AsyncImage(
+                model = popularImage ?: car.picture,
+                placeholder = painterResource(id = R.drawable.car_placeholder),
+                error = painterResource(id = R.drawable.car_placeholder),
                 contentDescription = "${car.brand} ${car.model}",
                 contentScale = ContentScale.Fit,
                 modifier = Modifier

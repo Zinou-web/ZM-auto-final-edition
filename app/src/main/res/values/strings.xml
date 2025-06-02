@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Rental Car App</string>
+    <string name="app_name">ZM Auto</string>
     
     <!-- Facebook Configuration -->
     <string name="facebook_app_id">YOUR_FACEBOOK_APP_ID</string>
+    <string name="facebook_client_token">""</string>
     <string name="fb_login_protocol_scheme">fbYOUR_FACEBOOK_APP_ID</string>
     
     <!-- Facebook Login Messages -->

@@ -16,6 +16,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -138,7 +139,8 @@ fun UpdateProfileScreen(navController: NavController) {
                             contentDescription = "Profile Image",
                             modifier = Modifier
                                 .size(120.dp)
-                                .clip(CircleShape),
+                                .clip(CircleShape)
+                                .alpha(if (selectedImageUri == null) 0.5f else 1f),
                             contentScale = ContentScale.Crop
                         )
                     }

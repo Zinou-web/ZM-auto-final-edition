@@ -75,7 +75,7 @@ fun OTPVerificationScreen(
     
     // Automatically request OTP when entering the screen (for registration flow)
     LaunchedEffect(Unit) {
-        if (!fromForgotPassword) {
+        if (fromForgotPassword) {
             viewModel.resendOtp()
         }
         // Pre-focus the first OTP digit field to open keyboard
@@ -395,4 +395,4 @@ fun OTPVerificationScreen(
             }
         }
     }
-}
+} 

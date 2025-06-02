@@ -130,7 +130,17 @@ fun GalleryScreen(
                 // Tab indicator/divider (full width)
                 GalleryTabDivider()
 
-                GalleryContent(imageUrls = listOf(car!!.picture).filterNotNull())
+                // Provide multiple images for i10 (ID 11), otherwise a single image
+                val imageUrls = if (car!!.id == 11L) {
+                    listOf(
+                        "android.resource://com.example.myapplication/drawable/car_details_i10",
+                        "android.resource://com.example.myapplication/drawable/grandi10grandi10frontview",
+                        "android.resource://com.example.myapplication/drawable/grandi10grandi10dashboard",
+                        "android.resource://com.example.myapplication/drawable/grandi10grandi10frontrowseats",
+                        "android.resource://com.example.myapplication/drawable/grandi10grandi10rearview"
+                    )
+                } else listOf(car!!.picture).filterNotNull()
+                GalleryContent(imageUrls = imageUrls)
             }
 
             // Fixed Price and Book Now Section at the bottom

@@ -38,17 +38,21 @@ import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.myapplication.R
 import com.example.myapplication.navigation.Screen
 import com.example.myapplication.ui.theme.poppins
 import com.example.myapplication.navigation.AppScreen
+import com.example.myapplication.ui.screens.profile.ProfileViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     navController: NavController = rememberNavController(),
+    viewModel: ProfileViewModel = hiltViewModel(),
     onBackClick: () -> Unit = { navController.popBackStack() }
 ) {
+    val profileViewModel = viewModel
     val accentColor = Color(0xFF149459)
     var showDeleteAccountSheet by remember { mutableStateOf(false) }
     
@@ -192,7 +196,8 @@ fun SettingsScreen(
                         Button(
                             onClick = {
                                 showDeleteAccountSheet = false
-                                // TODO: Perform account deletion logic here
+                                // Perform account deletion via ViewModel, then navigate to SignIn
+                                profileViewModel.deleteAccount()
                                 navController.navigate(AppScreen.SignIn.name) {
                                     popUpTo(0) { inclusive = true }
                                 }

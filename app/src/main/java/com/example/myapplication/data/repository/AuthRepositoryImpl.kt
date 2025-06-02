@@ -17,6 +17,9 @@ import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
 import javax.inject.Singleton
 import dagger.hilt.android.qualifiers.ApplicationContext
+import com.example.myapplication.data.api.NetworkResponse
+import retrofit2.HttpException
+import com.google.gson.Gson
 
 /**
  * Implementation of the AuthRepository interface.
@@ -66,7 +69,11 @@ class AuthRepositoryImpl @Inject constructor(
                 // Use the actual API call
                 Log.d("AuthRepository", "Attempting to login with email: $email")
                 val loginRequest = LoginRequest(email, password)
-                val response = apiService.login(loginRequest)
+                val wrapper: NetworkResponse<AuthResponse> = apiService.login(loginRequest)
+                if (!wrapper.success || wrapper.data == null) {
+                    throw Exception(wrapper.message ?: "Login failed")
+                }
+                val response = wrapper.data
                 
                 authPreferenceManager.saveUserId(response.userId?.toString() ?: "0")
                 response.email?.let { authPreferenceManager.saveUserEmail(it) }
@@ -77,6 +84,18 @@ class AuthRepositoryImpl @Inject constructor(
                 Log.d("AuthRepository", "Login API call successful for email: $email. User ID: ${response.userId}")
                 emit(ApiResource(status = ApiStatus.SUCCESS, data = response, message = "Login successful"))
             }
+        } catch (e: HttpException) {
+            // Parse error body to extract backend message when available
+            val errorBody = e.response()?.errorBody()?.string()
+            var errorMessage = e.message()
+            if (!errorBody.isNullOrEmpty()) {
+                try {
+                    val networkResponse = Gson().fromJson(errorBody, NetworkResponse::class.java)
+                    errorMessage = networkResponse.message ?: errorMessage
+                } catch (_: Exception) { }
+            }
+            Log.e("AuthRepository", "Login API HTTP error: $errorMessage", e)
+            emit(ApiResource(status = ApiStatus.ERROR, message = errorMessage))
         } catch (e: Exception) {
             Log.e("AuthRepository", "Login error: ${e.message}", e)
             emit(ApiResource(status = ApiStatus.ERROR, message = e.message ?: "Login failed"))
@@ -104,7 +123,11 @@ class AuthRepositoryImpl @Inject constructor(
                 emit(ApiResource(status = ApiStatus.SUCCESS, data = mockResponse))
             } else {
                 // Use the actual API call with the provided RegisterRequest object
-                val response = apiService.register(registerRequest)
+                val wrapper: NetworkResponse<AuthResponse> = apiService.register(registerRequest)
+                if (!wrapper.success || wrapper.data == null) {
+                    throw Exception(wrapper.message ?: "Registration failed")
+                }
+                val response = wrapper.data
                 
                 // Save authentication token and expiry for subsequent API calls
                 authPreferenceManager.saveAuthToken(response.token ?: "")
@@ -161,9 +184,11 @@ class AuthRepositoryImpl @Inject constructor(
                 // Always return success for mock
                 emit(ApiResource(status = ApiStatus.SUCCESS, data = true))
             } else {
-                apiService.requestPasswordReset(email)
-                // If no exception, we consider it successful
-                emit(ApiResource(status = ApiStatus.SUCCESS, data = true))
+                val wrapper: NetworkResponse<Boolean> = apiService.requestPasswordReset(email)
+                if (!wrapper.success || wrapper.data == null) {
+                    throw Exception(wrapper.message ?: "Password reset request failed")
+                }
+                emit(ApiResource(status = ApiStatus.SUCCESS, data = wrapper.data))
             }
         } catch (e: Exception) {
             emit(ApiResource(status = ApiStatus.ERROR, message = e.message ?: "Failed to request password reset"))
@@ -184,8 +209,11 @@ class AuthRepositoryImpl @Inject constructor(
                 val success = code == "123456"
                 emit(ApiResource(status = ApiStatus.SUCCESS, data = success))
             } else {
-                val response = apiService.verifyPasswordReset(email, code, newPassword)
-                emit(ApiResource(status = ApiStatus.SUCCESS, data = response.success))
+                val wrapper: NetworkResponse<PasswordResetResponse> = apiService.verifyPasswordReset(email, code, newPassword)
+                if (!wrapper.success || wrapper.data == null) {
+                    throw Exception(wrapper.message ?: "Password reset verification failed")
+                }
+                emit(ApiResource(status = ApiStatus.SUCCESS, data = wrapper.data.success))
             }
         } catch (e: Exception) {
             emit(ApiResource(status = ApiStatus.ERROR, message = e.message ?: "Failed to verify password reset"))
@@ -221,7 +249,11 @@ class AuthRepositoryImpl @Inject constructor(
                 emit(ApiResource(status = ApiStatus.SUCCESS, data = mockResponse))
             } else {
                 // Simulate Facebook login using the OAuth2 redirect endpoint
-                val response = apiService.handleOAuth2Redirect(token, 0) // UserId from server
+                val wrapper: NetworkResponse<AuthResponse> = apiService.handleOAuth2Redirect(token, 0)
+                if (!wrapper.success || wrapper.data == null) {
+                    throw Exception(wrapper.message ?: "Facebook login failed")
+                }
+                val response = wrapper.data
                 
                 authPreferenceManager.saveUserId(response.userId?.toString() ?: "0")
                 response.email?.let { authPreferenceManager.saveUserEmail(it) }
@@ -265,7 +297,11 @@ class AuthRepositoryImpl @Inject constructor(
                 emit(ApiResource(status = ApiStatus.SUCCESS, data = mockResponse))
             } else {
                 // Simulate Google login using the OAuth2 redirect endpoint
-                val response = apiService.handleOAuth2Redirect(token, 0) // UserId from server
+                val wrapper: NetworkResponse<AuthResponse> = apiService.handleOAuth2Redirect(token, 0)
+                if (!wrapper.success || wrapper.data == null) {
+                    throw Exception(wrapper.message ?: "Google login failed")
+                }
+                val response = wrapper.data
                 
                 authPreferenceManager.saveUserId(response.userId?.toString() ?: "0")
                 response.email?.let { authPreferenceManager.saveUserEmail(it) }
@@ -283,12 +319,11 @@ class AuthRepositoryImpl @Inject constructor(
     override suspend fun logout() {
         try {
             // Call the backend logout endpoint first
-            val response = apiService.logout() // Assumes ApiService has a logout() suspend fun
-            if (response.isSuccessful) {
-                Log.d("AuthRepositoryImpl", "Backend logout successful")
+            val wrapper: NetworkResponse<Void> = apiService.logout()
+            if (!wrapper.success) {
+                Log.w("AuthRepositoryImpl", "Backend logout returned error: ${wrapper.errorCode}")
             } else {
-                // Log error or handle unsuccessful backend logout if needed
-                Log.w("AuthRepositoryImpl", "Backend logout failed or returned error: ${response.code()}")
+                Log.d("AuthRepositoryImpl", "Backend logout successful")
             }
         } catch (e: Exception) {
             // Log or handle network errors during logout call
@@ -304,13 +339,11 @@ class AuthRepositoryImpl @Inject constructor(
         emit(ApiResource(status = ApiStatus.LOADING))
         try {
             val request = VerificationRequest(verificationCode)
-            val response = apiService.verifyEmail(userId, request)
-            if (response.isSuccessful) {
-                emit(ApiResource(status = ApiStatus.SUCCESS, data = true))
-            } else {
-                val error = response.errorBody()?.string()
-                emit(ApiResource(status = ApiStatus.ERROR, message = error ?: "Verification failed with code ${response.code()}"))
+            val wrapper: NetworkResponse<Void> = apiService.verifyEmail(userId, request)
+            if (!wrapper.success) {
+                throw Exception(wrapper.message ?: "Email verification failed")
             }
+            emit(ApiResource(status = ApiStatus.SUCCESS, data = true))
         } catch (e: Exception) {
             emit(ApiResource(status = ApiStatus.ERROR, message = e.message ?: "Verification failed"))
         }
@@ -319,13 +352,11 @@ class AuthRepositoryImpl @Inject constructor(
     override fun resendOtp(userId: Long): Flow<ApiResource<Boolean>> = flow {
         emit(ApiResource(status = ApiStatus.LOADING))
         try {
-            val response = apiService.resendOtp(userId)
-            if (response.isSuccessful) {
-                emit(ApiResource(status = ApiStatus.SUCCESS, data = true))
-            } else {
-                val error = response.errorBody()?.string()
-                emit(ApiResource(status = ApiStatus.ERROR, message = error ?: "Resend OTP failed with code ${response.code()}"))
+            val wrapper: NetworkResponse<Void> = apiService.resendOtp(userId)
+            if (!wrapper.success) {
+                throw Exception(wrapper.message ?: "Resend OTP failed")
             }
+            emit(ApiResource(status = ApiStatus.SUCCESS, data = true))
         } catch (e: Exception) {
             emit(ApiResource(status = ApiStatus.ERROR, message = e.message ?: "Resend OTP failed"))
         }

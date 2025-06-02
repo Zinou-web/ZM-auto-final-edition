@@ -27,6 +27,14 @@ import com.example.myapplication.R
 import com.example.myapplication.ui.theme.MyApplicationTheme
 import com.example.myapplication.ui.theme.poppins
 import com.example.myapplication.navigation.AppScreen
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.myapplication.ui.screens.auth.AuthViewModel
+import androidx.compose.runtime.collectAsState
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
+import com.example.myapplication.ui.screens.profile.ProfileViewModel
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.draw.alpha
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,6 +45,13 @@ fun logoutScreen(
     onFavoriteClick: () -> Unit = { navController.navigate(AppScreen.Favorites.name) },
     onBackClick: () -> Unit = { navController.popBackStack() }
 ) {
+    val authViewModel: AuthViewModel = hiltViewModel()
+    val profileViewModel: ProfileViewModel = hiltViewModel()
+    val user by profileViewModel.user.collectAsState()
+    LaunchedEffect(Unit) {
+        profileViewModel.loadUserProfile()
+    }
+
     var showLogoutSheet by remember { mutableStateOf(false) }
 
     // Calculate top padding based on status bar height
@@ -99,14 +114,25 @@ fun logoutScreen(
                 contentAlignment = Alignment.BottomEnd,
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             ) {
-                Image(
-                    painter = painterResource(id = R.drawable.account),
-                    contentDescription = "Profile Image",
-                    modifier = Modifier
-                        .size(140.dp)
-                        .clip(CircleShape)
-                )
-
+                if (user?.profileImage != null && user!!.profileImage.isNotEmpty()) {
+                    AsyncImage(
+                        model = user!!.profileImage,
+                        contentDescription = "Profile Image",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(140.dp)
+                            .clip(CircleShape)
+                    )
+                } else {
+                    Image(
+                        painter = painterResource(id = R.drawable.account),
+                        contentDescription = "Profile Image",
+                        modifier = Modifier
+                            .size(140.dp)
+                            .clip(CircleShape)
+                            .alpha(0.5f)
+                    )
+                }
                 Box(
                     modifier = Modifier
                         .offset(x = (-4).dp, y = (-4).dp)
@@ -126,7 +152,13 @@ fun logoutScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Name",
+                text = user?.let {
+                    if (!it.firstName.isNullOrEmpty()) {
+                        listOfNotNull(it.firstName, it.lastName).joinToString(" ")
+                    } else {
+                        it.name.orEmpty()
+                    }
+                } ?: "Name",
                 modifier = Modifier
                     .align(Alignment.CenterHorizontally)
                     .padding(vertical = 8.dp),
@@ -220,7 +252,11 @@ fun logoutScreen(
                         Button(
                             onClick = {
                                 showLogoutSheet = false
-                                // TODO: Perform logout logic here
+                                // Perform logout and navigate to SignIn
+                                authViewModel.logout()
+                                navController.navigate(AppScreen.SignIn.name) {
+                                    popUpTo(0) { inclusive = true }
+                                }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEFEFEF)),
                             modifier = Modifier

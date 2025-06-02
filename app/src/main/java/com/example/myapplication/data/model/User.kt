@@ -1,15 +1,17 @@
 package com.example.myapplication.data.model
 
+import com.google.gson.annotations.SerializedName
+
 data class User(
     val id: Long,
+    @SerializedName("firstName") val firstName: String? = null,
+    @SerializedName("lastName") val lastName: String? = null,
     val name: String? = null,
     val email: String,
-    val phone: String? = null,
-    val profileImage: String? = null,
-    val address: Address? = null,
-    val drivingLicense: DrivingLicense? = null,
+    @SerializedName("phoneNumber") val phone: String? = null,
+    @SerializedName("picture") val profileImage: String? = null,
     val favorites: List<Long> = emptyList(),
-    val isEmailVerified: Boolean = false,
+    @SerializedName("emailVerified") val isEmailVerified: Boolean = false,
     val profileImageUrl: String? = null
 )
 

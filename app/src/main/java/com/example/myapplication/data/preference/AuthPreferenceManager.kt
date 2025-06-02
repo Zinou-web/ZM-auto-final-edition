@@ -31,6 +31,7 @@ class AuthPreferenceManager @Inject constructor(
         private const val KEY_USER_EMAIL = "user_email"
         private const val KEY_USER_NAME = "user_name"
         private const val KEY_USER_PROFILE_IMAGE = "user_profile_image"
+        private const val KEY_USER_PHONE = "user_phone"
     }
     
     fun saveAuthToken(token: String) {
@@ -66,6 +67,12 @@ class AuthPreferenceManager @Inject constructor(
     }
     
     fun getUserEmail(): String? = sharedPreferences.getString(KEY_USER_EMAIL, null)
+    
+    fun saveUserPhone(phone: String) {
+        sharedPreferences.edit().putString(KEY_USER_PHONE, phone).apply()
+    }
+    
+    fun getUserPhone(): String? = sharedPreferences.getString(KEY_USER_PHONE, null)
     
     fun saveUserName(userName: String) {
         sharedPreferences.edit().putString(KEY_USER_NAME, userName).apply()

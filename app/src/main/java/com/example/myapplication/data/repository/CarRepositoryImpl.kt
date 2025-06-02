@@ -147,6 +147,20 @@ class CarRepositoryImpl @Inject constructor(
             colour = "Black",
             fuel = "Electric",
             type = "Electric"
+        ),
+        // New mock entry for Hyundai i10 with red color and local drawable resource
+        Car(
+            id = 11,
+            picture = "android.resource://com.example.myapplication/drawable/car_details_i10",
+            brand = "Hyundai",
+            model = "i10",
+            year = 2022,
+            rentalPricePerDay = java.math.BigDecimal(50.0),
+            transmission = "Manual",
+            rating = 4,
+            colour = "Red",
+            fuel = "Petrol",
+            type = "Hatchback"
         )
     )
 

@@ -660,6 +660,14 @@ fun NavGraph(
                 reservationViewModel = hiltViewModel()
             )
         }
+
+        // Add CompleteProfile route after OTP/NewPassword flows
+        composable(AppScreen.CompleteProfile.name) {
+            CompleteProfileScreen(
+                onBackClick = { navController.popBackStack() },
+                onProfileCompleted = { navController.navigateAndClear(AppScreen.Home.name) }
+            )
+        }
     }
 }
 

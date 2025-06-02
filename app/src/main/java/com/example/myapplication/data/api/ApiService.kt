@@ -8,6 +8,7 @@ import com.example.myapplication.data.model.User
 import okhttp3.MultipartBody
 import retrofit2.http.*
 import retrofit2.Response
+import com.example.myapplication.data.api.NetworkResponse
 
 interface ApiService {
     // User Profile
@@ -15,14 +16,14 @@ interface ApiService {
     suspend fun getUserById(@Path("id") id: Long, @Header("Authorization") token: String): User
 
     @GET("api/users/me")
-    suspend fun getCurrentUser(@Header("Authorization") token: String): User
+    suspend fun getCurrentUser(@Header("Authorization") token: String): NetworkResponse<User>
 
     // Facebook OAuth
     @GET("api/users/oauth2/redirect")
     suspend fun handleOAuth2Redirect(
         @Query("token") token: String, 
         @Query("userId") userId: Long
-    ): AuthResponse
+    ): NetworkResponse<AuthResponse>
 
     @GET("api/users/oauth2/check-email")
     suspend fun checkEmailExists(@Query("email") email: String): Map<String, Boolean>
@@ -36,10 +37,10 @@ interface ApiService {
 
     // Authentication
     @POST("api/users/login")
-    suspend fun login(@Body request: LoginRequest): AuthResponse
+    suspend fun login(@Body request: LoginRequest): NetworkResponse<AuthResponse>
 
     @POST("api/users/register")
-    suspend fun register(@Body request: RegisterRequest): AuthResponse
+    suspend fun register(@Body request: RegisterRequest): NetworkResponse<AuthResponse>
 
     /**
      * Verify email using the OTP code sent to the user's email
@@ -48,7 +49,7 @@ interface ApiService {
     suspend fun verifyEmail(
         @Path("userId") userId: Long,
         @Body request: VerificationRequest
-    ): Response<Void>
+    ): NetworkResponse<Void>
 
     /**
      * Resend the email verification code (OTP)
@@ -56,33 +57,33 @@ interface ApiService {
     @POST("api/users/{userId}/resend-otp")
     suspend fun resendOtp(
         @Path("userId") userId: Long
-    ): Response<Map<String, String>>
+    ): NetworkResponse<Void>
 
     @POST("api/users/password-reset/request")
-    suspend fun requestPasswordReset(@Query("email") email: String)
+    suspend fun requestPasswordReset(@Query("email") email: String): NetworkResponse<Boolean>
 
     @POST("api/users/password-reset/verify")
     suspend fun verifyPasswordReset(
         @Query("email") email: String,
         @Query("code") code: String,
         @Query("newPassword") newPassword: String
-    ): PasswordResetResponse
+    ): NetworkResponse<PasswordResetResponse>
 
     @POST("api/users/logout")
-    suspend fun logout(): retrofit2.Response<Unit>
+    suspend fun logout(): NetworkResponse<Void>
 
     @POST("api/users/me/change-password")
     suspend fun changePassword(
         @Query("currentPassword") currentPassword: String,
         @Query("newPassword") newPassword: String,
         @Header("Authorization") token: String
-    )
+    ): NetworkResponse<Void>
 
     @DELETE("api/users/{id}")
     suspend fun deleteAccount(
         @Path("id") id: Long,
         @Header("Authorization") token: String
-    )
+    ): NetworkResponse<Void>
 
     // Profile Management
     @Multipart
@@ -90,7 +91,7 @@ interface ApiService {
     suspend fun uploadProfileImage(
         @Part image: MultipartBody.Part,
         @Header("Authorization") token: String
-    ): ImageUploadResponse
+    ): NetworkResponse<ImageUploadResponse>
 
     // Car Management
     @GET("api/cars")

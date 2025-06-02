@@ -69,7 +69,7 @@ class MainActivity : ComponentActivity() {
                 // First try the manager way
                 val success = googleAuthManager.forceReInitialize(webClientId, "MainActivity_onCreate")
                 
-                // Double check with direct initialization
+                // Double check with direct initializaticursedzino@gmail.comon
                 val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                     .requestIdToken(webClientId)
                     .requestEmail()

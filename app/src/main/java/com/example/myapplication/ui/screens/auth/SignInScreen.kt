@@ -46,6 +46,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.example.myapplication.ui.viewmodel.SocialLoginViewModel
 import com.example.myapplication.ui.viewmodel.SocialLoginUiState
 import androidx.activity.ComponentActivity
+import com.example.myapplication.data.preference.AuthPreferenceManager
 
 private const val TAG = "SignInScreen"
 
@@ -64,6 +65,8 @@ fun SignInScreen(
     android.util.Log.d(TAG, "SignInScreen composable is being entered")
     
     val context = LocalContext.current
+    // Use encrypted preferences to pre-fill email if available
+    val authPrefManager = remember { AuthPreferenceManager(context) }
     val activity = context as? ComponentActivity
     
     if (activity == null) {
@@ -76,8 +79,8 @@ fun SignInScreen(
     }
     
     val socialLoginState by socialViewModel.loginState.collectAsStateWithLifecycle()
-    var email by remember { mutableStateOf("test@example.com") }
-    var password by remember { mutableStateOf("password") }
+    var email by remember { mutableStateOf(authPrefManager.getUserEmail() ?: "") }
+    var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var rememberMe by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }

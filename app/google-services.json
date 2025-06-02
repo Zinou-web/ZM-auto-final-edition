@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "717012814914",
+    "project_id": "zmautofinalversion",
+    "storage_bucket": "zmautofinalversion.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:717012814914:android:dfb2c4b46a7997610b71db",
+        "android_client_info": {
+          "package_name": "com.example.myapplication"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "717012814914-mcos1bnoeb5mor73aj8vp982uh66pu95.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCgPFkMRQhe0fPD13xJIqynAX7rTcQduQE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "717012814914-mcos1bnoeb5mor73aj8vp982uh66pu95.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+} 

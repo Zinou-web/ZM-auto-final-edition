@@ -228,12 +228,8 @@ class SocialLoginViewModel @Inject constructor(
             // Register if initialized
             if (initialized) {
                 googleAuthManager.preRegister(activity)
-                try {
-                    loginWithGoogle(webClientId)
-                    return true
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error registering result launcher: ${e.message}")
-                }
+                // Initialization completed; wait for user to trigger sign-in
+                return true
             }
             
             return initialized

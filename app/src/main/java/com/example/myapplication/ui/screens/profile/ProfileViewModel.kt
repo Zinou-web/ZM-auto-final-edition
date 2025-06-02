@@ -83,13 +83,19 @@ class ProfileViewModel @Inject constructor(
                         ApiStatus.SUCCESS -> {
                             result.data?.let { loadedUser ->
                                 _user.value = loadedUser
-                                // Update mutable states for UI from the loaded User object
-                                name.value = loadedUser.name ?: ""
-                                email.value = loadedUser.email ?: ""
-                                phone.value = loadedUser.phone ?: ""
-                                currentProfileImageUrl.value = loadedUser.profileImage
+                                // Build full name from firstName/lastName or fallback to name
+                                val fullName = if (!loadedUser.firstName.isNullOrEmpty()) {
+                                    listOfNotNull(loadedUser.firstName, loadedUser.lastName).joinToString(" ")
+                                } else {
+                                    loadedUser.name.orEmpty()
+                                }
+                                name.value = fullName
+                                email.value = loadedUser.email
+                                phone.value = loadedUser.phone.orEmpty()
+                                // Use server picture or fallback to saved preference
+                                currentProfileImageUrl.value = loadedUser.profileImage ?: authPreferenceManager.getUserProfileImage().orEmpty()
                                 _uiState.value = ProfileUiState.Success()
-                                Log.d("ProfileViewModel", "Profile loaded successfully: ${loadedUser.name}")
+                                Log.d("ProfileViewModel", "Profile loaded successfully: $fullName")
                             } ?: run {
                                 _uiState.value = ProfileUiState.Error("User profile data is null")
                             }
@@ -123,8 +129,21 @@ class ProfileViewModel @Inject constructor(
                         ApiStatus.SUCCESS -> {
                             result.data?.let { user ->
                                 _user.value = user
+                                // Build full name and update UI state
+                                val fullName = if (!user.firstName.isNullOrEmpty()) {
+                                    listOfNotNull(user.firstName, user.lastName).joinToString(" ")
+                                } else {
+                                    user.name.orEmpty()
+                                }
+                                name.value = fullName
+                                email.value = user.email.orEmpty()
+                                phone.value = user.phone.orEmpty()
+                                // Persist updated fields
+                                authPreferenceManager.saveUserName(fullName)
+                                authPreferenceManager.saveUserEmail(user.email.orEmpty())
+                                authPreferenceManager.saveUserPhone(user.phone.orEmpty())
                                 _uiState.value = ProfileUiState.Success("Profile updated successfully")
-                                Log.d("ProfileViewModel", "Profile updated successfully: ${user.name}")
+                                Log.d("ProfileViewModel", "Profile updated successfully: $fullName")
                             } ?: run {
                                 _uiState.value = ProfileUiState.Error("Updated user data is null")
                             }
@@ -164,8 +183,13 @@ class ProfileViewModel @Inject constructor(
                         when (result.status) {
                             ApiStatus.SUCCESS -> {
                                 result.data?.let { imageUrl ->
-                                    // Update local user data with new image URL
-                                    _user.value = _user.value?.copy(profileImage = imageUrl)
+                                    // Update local user data with new image URL, safely preserving favorites
+                                    _user.value = _user.value?.let { user ->
+                                        user.copy(
+                                            profileImage = imageUrl,
+                                            favorites = (user.favorites as? List<Long>) ?: emptyList()
+                                        )
+                                    }
                                     // Also update the specific UI state for currentProfileImageUrl
                                     currentProfileImageUrl.value = imageUrl
                                     // Persist the new image URL through AuthPreferenceManager if desired

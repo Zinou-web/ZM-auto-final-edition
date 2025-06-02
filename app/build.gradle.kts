@@ -16,6 +16,7 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "API_BASE_URL", "\"https://c3ab-41-200-177-222.ngrok-free.app/\"")
     }
 
     lint {
@@ -24,6 +25,9 @@ android {
     }
 
     buildTypes {
+        debug {
+            // using defaultConfig's API_BASE_URL
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(

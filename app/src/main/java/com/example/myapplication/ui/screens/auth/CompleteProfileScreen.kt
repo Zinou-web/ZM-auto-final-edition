@@ -1,5 +1,7 @@
 package com.example.myapplication.ui.screens.auth
 
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -38,6 +40,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.platform.LocalContext
 import com.example.myapplication.ui.screens.profile.ProfileViewModel
 import com.example.myapplication.ui.screens.profile.ProfileUiState
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.app.DatePickerDialog
+import java.util.Calendar
+import coil.compose.rememberAsyncImagePainter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,6 +56,20 @@ fun CompleteProfileScreen(
     val user by viewModel.user.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+
+    // Launcher to pick an image from gallery
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+        onResult = { uri: Uri? ->
+            uri?.let {
+                viewModel.onProfileImageSelected(it)
+                viewModel.uploadProfileImage(it)
+            }
+        }
+    )
+    // Profile image states
+    val newProfileImageUri = viewModel.newProfileImageUri
+    val profileImageUrl by viewModel.currentProfileImageUrl
 
     // State variables
     var firstName by remember { mutableStateOf("") }
@@ -62,12 +83,10 @@ fun CompleteProfileScreen(
     // Populate fields when user data is loaded
     LaunchedEffect(user) {
         user?.let {
-            // Safely split full name into first and last, default to empty if name is null
-            val fullName = it.name.orEmpty()
-            val parts = fullName.split(" ")
-            firstName = parts.getOrNull(0) ?: ""
-            lastName = parts.drop(1).joinToString(" ").trim()
-            phoneNumber = it.phone ?: ""
+            // Use mapped firstName and lastName from API
+            firstName = it.firstName.orEmpty()
+            lastName = it.lastName.orEmpty()
+            phoneNumber = it.phone.orEmpty()
         }
     }
 
@@ -75,11 +94,14 @@ fun CompleteProfileScreen(
     LaunchedEffect(uiState) {
         when (uiState) {
             is ProfileUiState.Success -> {
-                // Only navigate on update success (data contains a message), ignore initial load
+                // Only navigate on update success (data contains a message), ignore initial load and image upload
                 val message = (uiState as ProfileUiState.Success).data as? String
                 if (!message.isNullOrEmpty()) {
                     Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-                    onProfileCompleted()
+                    // Navigate only when full profile update is successful
+                    if (message == "Profile updated successfully") {
+                        onProfileCompleted()
+                    }
                 }
             }
             is ProfileUiState.Error -> {
@@ -223,12 +245,31 @@ fun CompleteProfileScreen(
                         modifier = Modifier
                             .size(200.dp)
                             .clip(CircleShape)
+                            .clickable {
+                                // Launch system picker for images
+                                imagePickerLauncher.launch("image/*")
+                            }
                     ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.account),
-                            contentDescription = "Profile Image",
-                            modifier = Modifier.size(180.dp)
-                        )
+                        // Display selected or existing profile image
+                        if (newProfileImageUri != null) {
+                            Image(
+                                painter = rememberAsyncImagePainter(newProfileImageUri),
+                                contentDescription = "Profile Image",
+                                modifier = Modifier.size(180.dp)
+                            )
+                        } else if (!profileImageUrl.isNullOrEmpty()) {
+                            Image(
+                                painter = rememberAsyncImagePainter(profileImageUrl),
+                                contentDescription = "Profile Image",
+                                modifier = Modifier.size(180.dp)
+                            )
+                        } else {
+                            Image(
+                                painter = painterResource(id = R.drawable.account),
+                                contentDescription = "Profile Image",
+                                modifier = Modifier.size(180.dp)
+                            )
+                        }
                     }
                     
                     // Edit button
@@ -409,7 +450,19 @@ fun CompleteProfileScreen(
                             imageVector = Icons.Default.DateRange,
                             contentDescription = "Select Date",
                             tint = Color(0xFF149459),
-                            modifier = Modifier.clickable { /* Open date picker if needed */ }
+                            modifier = Modifier.clickable {
+                                // Open date picker dialog
+                                val calendar = Calendar.getInstance()
+                                DatePickerDialog(
+                                    context,
+                                    { _, year, month, dayOfMonth ->
+                                        birthday = "%02d/%02d/%04d".format(dayOfMonth, month + 1, year)
+                                    },
+                                    calendar.get(Calendar.YEAR),
+                                    calendar.get(Calendar.MONTH),
+                                    calendar.get(Calendar.DAY_OF_MONTH)
+                                ).show()
+                            }
                         )
                     },
                     singleLine = true,
@@ -457,7 +510,15 @@ fun CompleteProfileScreen(
                         Icon(
                             imageVector = Icons.Default.LocationOn,
                             contentDescription = "Select Location",
-                            tint = Color(0xFF149459)
+                            tint = Color(0xFF149459),
+                            modifier = Modifier.clickable {
+                                // Launch external map for location selection
+                                val mapIntent = Intent(
+                                    Intent.ACTION_VIEW,
+                                    Uri.parse("geo:0,0?q=")
+                                )
+                                context.startActivity(mapIntent)
+                            }
                         )
                     },
                     singleLine = true,

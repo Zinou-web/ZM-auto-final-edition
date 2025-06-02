@@ -3,6 +3,7 @@ package com.example.myapplication.data.repository
 import com.example.myapplication.data.api.ApiResource
 import com.example.myapplication.data.api.ApiService
 import com.example.myapplication.data.api.ApiStatus
+import com.example.myapplication.data.api.ImageUploadResponse
 import com.example.myapplication.data.api.UpdateProfileRequest
 import com.example.myapplication.data.model.User
 import com.example.myapplication.data.preference.AuthPreferenceManager
@@ -11,6 +12,7 @@ import kotlinx.coroutines.flow.flow
 import okhttp3.MultipartBody
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.example.myapplication.data.api.NetworkResponse
 
 /**
  * Implementation of the UserRepository interface for user-related operations.
@@ -25,8 +27,9 @@ class UserRepositoryImpl @Inject constructor(
         emit(ApiResource(status = ApiStatus.LOADING))
         try {
             val authToken = authPreferenceManager.getAuthToken() ?: throw IllegalStateException("Not authenticated")
-            
-            val user = apiService.getCurrentUser("Bearer $authToken")
+            val wrapper: NetworkResponse<User> = apiService.getCurrentUser("Bearer $authToken")
+            if (!wrapper.success || wrapper.data == null) throw Exception(wrapper.message ?: "Failed to load profile")
+            val user = wrapper.data
             emit(ApiResource(status = ApiStatus.SUCCESS, data = user))
         } catch (e: Exception) {
             emit(ApiResource(status = ApiStatus.ERROR, message = e.message ?: "Failed to get user profile"))
@@ -45,7 +48,7 @@ class UserRepositoryImpl @Inject constructor(
                 phone = phone
             )
             
-            val updatedUser = apiService.updateUserProfile(userId, request, "Bearer $authToken")
+            val updatedUser: User = apiService.updateUserProfile(userId, request, "Bearer $authToken")
             emit(ApiResource(status = ApiStatus.SUCCESS, data = updatedUser))
         } catch (e: Exception) {
             emit(ApiResource(status = ApiStatus.ERROR, message = e.message ?: "Failed to update profile"))
@@ -57,7 +60,8 @@ class UserRepositoryImpl @Inject constructor(
         try {
             val authToken = authPreferenceManager.getAuthToken() ?: throw IllegalStateException("Not authenticated")
             
-            apiService.changePassword(currentPassword, newPassword, "Bearer $authToken")
+            val wrapper: NetworkResponse<Void> = apiService.changePassword(currentPassword, newPassword, "Bearer $authToken")
+            if (!wrapper.success) throw Exception(wrapper.message ?: "Change password failed")
             emit(ApiResource(status = ApiStatus.SUCCESS, data = true))
         } catch (e: Exception) {
             emit(ApiResource(status = ApiStatus.ERROR, message = e.message ?: "Failed to change password"))
@@ -69,8 +73,9 @@ class UserRepositoryImpl @Inject constructor(
         try {
             val authToken = authPreferenceManager.getAuthToken() ?: throw IllegalStateException("Not authenticated")
             
-            val response = apiService.uploadProfileImage(image, "Bearer $authToken")
-            emit(ApiResource(status = ApiStatus.SUCCESS, data = response.url))
+            val wrapper: NetworkResponse<ImageUploadResponse> = apiService.uploadProfileImage(image, "Bearer $authToken")
+            if (!wrapper.success || wrapper.data == null) throw Exception(wrapper.message ?: "Upload image failed")
+            emit(ApiResource(status = ApiStatus.SUCCESS, data = wrapper.data.url))
         } catch (e: Exception) {
             emit(ApiResource(status = ApiStatus.ERROR, message = e.message ?: "Failed to upload profile image"))
         }
@@ -82,7 +87,8 @@ class UserRepositoryImpl @Inject constructor(
             val authToken = authPreferenceManager.getAuthToken() ?: throw IllegalStateException("Not authenticated")
             val userId = authPreferenceManager.getUserId()?.toLongOrNull() ?: throw IllegalStateException("User ID not found")
             
-            apiService.deleteAccount(userId, "Bearer $authToken")
+            val wrapper: NetworkResponse<Void> = apiService.deleteAccount(userId, "Bearer $authToken")
+            if (!wrapper.success) throw Exception(wrapper.message ?: "Delete account failed")
             authPreferenceManager.clearAuthData()
             emit(ApiResource(status = ApiStatus.SUCCESS, data = true))
         } catch (e: Exception) {

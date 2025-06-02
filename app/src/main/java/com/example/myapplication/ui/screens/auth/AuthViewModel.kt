@@ -13,6 +13,7 @@ import com.example.myapplication.data.auth.GoogleAuthHelper
 import com.example.myapplication.data.repository.AuthRepository
 import com.facebook.FacebookException
 import com.facebook.login.LoginResult
+import com.facebook.FacebookSdk
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import com.google.android.gms.tasks.Task
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -60,18 +61,8 @@ class AuthViewModel @Inject constructor(
     }
 
     private fun initializeAuthHelpers() {
+        // Initialize Google authentication helper
         try {
-            facebookAuthHelper = FacebookAuthHelper(
-                context = context,
-                onSuccess = { token ->
-                    handleFacebookToken(token)
-                },
-                onError = { error ->
-                    _uiState.value = AuthUiState.Error(error)
-                    Log.e(TAG, "Facebook authentication error: $error")
-                }
-            )
-
             googleAuthHelper = GoogleAuthHelper(
                 context = context,
                 onSuccess = { token ->
@@ -83,9 +74,12 @@ class AuthViewModel @Inject constructor(
                 }
             )
         } catch (e: Exception) {
-            Log.e(TAG, "Error initializing auth helpers", e)
-            _uiState.value = AuthUiState.Error("Failed to initialize authentication")
+            Log.e(TAG, "Error initializing Google auth helper", e)
+            _uiState.value = AuthUiState.Error("Failed to initialize Google authentication")
         }
+
+        // Facebook login temporarily disabled
+        facebookAuthHelper = null
     }
 
     /**
