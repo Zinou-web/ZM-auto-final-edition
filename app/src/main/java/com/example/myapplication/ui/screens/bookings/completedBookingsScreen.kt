@@ -42,6 +42,9 @@ import java.time.format.DateTimeFormatter
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.layout.ContentScale
 import com.example.myapplication.ui.screens.home.FavoriteViewModel
+import coil.compose.rememberAsyncImagePainter
+import android.net.Uri
+import android.content.Intent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -362,6 +365,24 @@ fun CompletedBookingItem(
     LaunchedEffect(carId) {
         favoriteViewModel.checkFavoriteStatus(carId)
     }
+    
+    // Get context for intent actions
+    val context = LocalContext.current
+    
+    // Function to navigate to Batna location
+    val navigateToBatna: () -> Unit = {
+        val gmmIntentUri = Uri.parse("geo:35.5607,6.1734?q=Batna,Algeria")
+        val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
+        mapIntent.setPackage("com.google.android.apps.maps")
+        
+        try {
+            context.startActivity(mapIntent)
+        } catch (e: Exception) {
+            val browserIntent = Intent(Intent.ACTION_VIEW, 
+                Uri.parse("https://www.google.com/maps/search/?api=1&query=Batna,Algeria"))
+            context.startActivity(browserIntent)
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -396,7 +417,13 @@ fun CompletedBookingItem(
                     ) {
                         // Car Image
                         Image(
-                            painter = painterResource(id = R.drawable.car_placeholder),
+                            painter = when {
+                                reservation.car?.picture?.isNotEmpty() == true -> rememberAsyncImagePainter(reservation.car.picture)
+                                reservation.car?.model?.contains("i10", ignoreCase = true) == true -> painterResource(id = R.drawable.car_details_i10)
+                                reservation.car?.model?.contains("Yaris", ignoreCase = true) == true -> painterResource(id = R.drawable.yaristoprated)
+                                reservation.car?.model?.contains("A3", ignoreCase = true) == true -> painterResource(id = R.drawable.a3mostpopfinal)
+                                else -> painterResource(id = R.drawable.car_placeholder)
+                            },
                             contentDescription = "${reservation.car?.brand} ${reservation.car?.model}",
                             contentScale = ContentScale.Fit,
                             modifier = Modifier.fillMaxSize()
@@ -584,20 +611,22 @@ fun CompletedBookingItem(
                         fontSize = 14.sp,
                         fontFamily = poppins,
                         fontWeight = FontWeight.Normal,
-                        color = Color.Gray,
-                        modifier = Modifier.clickable { /* Navigate action */ }
+                        color = Color(0xFF149459),
+                        modifier = Modifier.clickable { navigateToBatna() }
                     )
                 }
                 
                 Spacer(modifier = Modifier.height(12.dp))
                 
                 // Map placeholder
-                Box(
+                Image(
+                    painter = painterResource(id = R.drawable.batna),
+                    contentDescription = "Map of Batna",
+                    contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(160.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color.LightGray)
                 )
                 
                 Spacer(modifier = Modifier.height(16.dp))

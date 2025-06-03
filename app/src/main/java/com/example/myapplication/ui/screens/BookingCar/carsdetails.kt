@@ -194,7 +194,7 @@ fun CarDetailsScreen(
                     CarRenterSection(
                         onChatClick = {
                             // Toast.makeText(context, "Chat clicked", Toast.LENGTH_SHORT).show()
-                            val phoneNumber = "0123456789" // Placeholder
+                            val phoneNumber = "+213 657123478" // Updated phone number
                             val intent = Intent(Intent.ACTION_VIEW).apply {
                                 data = Uri.parse("sms:$phoneNumber")
                             }
@@ -206,7 +206,7 @@ fun CarDetailsScreen(
                         },
                         onCallClick = {
                             // Toast.makeText(context, "Call clicked", Toast.LENGTH_SHORT).show()
-                            val phoneNumber = "0123456789" // Placeholder
+                            val phoneNumber = "+213 657123478" // Updated phone number
                             val intent = Intent(Intent.ACTION_DIAL).apply {
                                 data = Uri.parse("tel:$phoneNumber")
                             }
@@ -575,61 +575,11 @@ fun TopImageSection(
         }
 
         // Car image thumbnails
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 35.dp)
-                .fillMaxWidth()
-                .padding(horizontal = 28.dp)
-                .height(52.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(Color.White),
-            contentAlignment = Alignment.Center
-        ) {
-            LazyRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 15.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                items(6) { index ->
-                    val isMore = index == 5
 
-                    Box(
-                        modifier = Modifier
-                            .size(45.dp, 45.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(Color.White),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (isMore) {
-                            Text(
-                                text = "+99",
-                                color = Color.Black,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp,
-                            )
-                        } else {
-                            Image(
-                                painter = painterResource(
-                                    id = when (index) {
-                                        0 -> R.drawable.ic_launcher_background
-                                        1 -> R.drawable.ic_launcher_background
-                                        2 -> R.drawable.ic_launcher_background
-                                        3 -> R.drawable.ic_launcher_background
-                                        else -> R.drawable.ic_launcher_background
-                                    }
-                                ),
-                                contentDescription = "Car thumbnail",
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
-                    }
-                }
-            }
-        }
+
+
+
+
     }
 }
 

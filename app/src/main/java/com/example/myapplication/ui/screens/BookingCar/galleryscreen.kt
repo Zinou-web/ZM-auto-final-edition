@@ -130,16 +130,40 @@ fun GalleryScreen(
                 // Tab indicator/divider (full width)
                 GalleryTabDivider()
 
-                // Provide multiple images for i10 (ID 11), otherwise a single image
-                val imageUrls = if (car!!.id == 11L) {
-                    listOf(
+                // Provide multiple images for each mock car
+                val imageUrls = when (car!!.id) {
+                    1L -> listOf(
+                        // Hyundai i10 photos
                         "android.resource://com.example.myapplication/drawable/car_details_i10",
                         "android.resource://com.example.myapplication/drawable/grandi10grandi10frontview",
                         "android.resource://com.example.myapplication/drawable/grandi10grandi10dashboard",
                         "android.resource://com.example.myapplication/drawable/grandi10grandi10frontrowseats",
                         "android.resource://com.example.myapplication/drawable/grandi10grandi10rearview"
                     )
-                } else listOf(car!!.picture).filterNotNull()
+                    2L -> listOf(
+                        // Toyota Yaris photos
+                        "android.resource://com.example.myapplication/drawable/yaristoprated",
+                        "android.resource://com.example.myapplication/drawable/yarisyarisfrontview",
+                        "android.resource://com.example.myapplication/drawable/yarisyarisleftfrontthreequarter",
+                        "android.resource://com.example.myapplication/drawable/yarisyarisrightsideview",
+                        "android.resource://com.example.myapplication/drawable/yarisyarisrearview",
+                        "android.resource://com.example.myapplication/drawable/yarisyarisfrontrowseats",
+                        "android.resource://com.example.myapplication/drawable/yarisyarisleftrearthreequarter",
+                        "android.resource://com.example.myapplication/drawable/yarisyarisrightfrontthreequarter"
+                    )
+                    3L -> listOf(
+                        // Audi A3 photos
+                        "android.resource://com.example.myapplication/drawable/audia3topratedcars",
+                        "android.resource://com.example.myapplication/drawable/newa3a3newrightfrontthreequarter",
+                        "android.resource://com.example.myapplication/drawable/newa3newa3rightsideview",
+                        "android.resource://com.example.myapplication/drawable/newa3newa3leftrearthreequarter",
+                        "android.resource://com.example.myapplication/drawable/newa3newa3rearbadge",
+                        "android.resource://com.example.myapplication/drawable/newa3newa3headlight",
+                        "android.resource://com.example.myapplication/drawable/newa3newa3bootspace",
+                        "android.resource://com.example.myapplication/drawable/newa3newa3steeringwheel"
+                    )
+                    else -> listOfNotNull(car!!.picture)
+                }
                 GalleryContent(imageUrls = imageUrls)
             }
 
@@ -246,61 +270,7 @@ fun GalleryTopImageSection(
         }
 
         // Car image thumbnails
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 35.dp)
-                .fillMaxWidth()
-                .padding(horizontal = 28.dp)
-                .height(52.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(Color.White),
-            contentAlignment = Alignment.Center
-        ) {
-            LazyRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 15.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                items(listOf(0, 1, 2, 3, 4, 5)) { index ->
-                    val isMore = index == 5
 
-                    Box(
-                        modifier = Modifier
-                            .size(45.dp, 45.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(Color.White),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (isMore) {
-                            Text(
-                                text = "+99",
-                                color = Color.Black,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp,
-                            )
-                        } else {
-                            Image(
-                                painter = painterResource(
-                                    id = when (index) {
-                                        0 -> R.drawable.ic_launcher_background
-                                        1 -> R.drawable.ic_launcher_background
-                                        2 -> R.drawable.ic_launcher_background
-                                        3 -> R.drawable.ic_launcher_background
-                                        else -> R.drawable.ic_launcher_background
-                                    }
-                                ),
-                                contentDescription = "Car thumbnail",
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
-                    }
-                }
-            }
-        }
     }
 }
 
@@ -453,14 +423,7 @@ fun GalleryContent(
                 color = Color.Black
             )
 
-            // "View all" can be made clickable later if needed
-            Text(
-                text = "View all",
-                fontSize = 14.sp,
-                fontFamily = poppins,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.Gray
-            )
+
         }
 
         if (imageUrls.isEmpty()) {

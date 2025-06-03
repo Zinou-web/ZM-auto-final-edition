@@ -45,6 +45,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import android.app.DatePickerDialog
 import java.util.Calendar
 import coil.compose.rememberAsyncImagePainter
+import androidx.compose.ui.layout.ContentScale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -245,6 +246,7 @@ fun CompleteProfileScreen(
                         modifier = Modifier
                             .size(200.dp)
                             .clip(CircleShape)
+                            .background(Color.LightGray)
                             .clickable {
                                 // Launch system picker for images
                                 imagePickerLauncher.launch("image/*")
@@ -255,19 +257,29 @@ fun CompleteProfileScreen(
                             Image(
                                 painter = rememberAsyncImagePainter(newProfileImageUri),
                                 contentDescription = "Profile Image",
-                                modifier = Modifier.size(180.dp)
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .size(180.dp)
+                                    .clip(CircleShape)
                             )
                         } else if (!profileImageUrl.isNullOrEmpty()) {
                             Image(
                                 painter = rememberAsyncImagePainter(profileImageUrl),
                                 contentDescription = "Profile Image",
-                                modifier = Modifier.size(180.dp)
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .size(180.dp)
+                                    .clip(CircleShape)
                             )
                         } else {
                             Image(
-                                painter = painterResource(id = R.drawable.account),
+                                painter = painterResource(id = R.drawable.accountusethis),
                                 contentDescription = "Profile Image",
-                                modifier = Modifier.size(180.dp)
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .size(180.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.LightGray)
                             )
                         }
                     }

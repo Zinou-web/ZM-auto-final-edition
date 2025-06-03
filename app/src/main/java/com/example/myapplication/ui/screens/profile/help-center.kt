@@ -1,5 +1,8 @@
 package com.example.myapplication.ui.screens.profile
 
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -15,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -182,6 +186,17 @@ fun FAQList(questions: List<String>) {
 @Composable
 fun FAQItem(question: String) {
     var expanded by remember { mutableStateOf(false) }
+    
+    // Map questions to answers
+    val answers = mapOf(
+        "Can I track my booked deliver status?" to "Yes, you can track your booking status in the 'My Bookings' section. The app provides real-time updates on the status of your reservation.",
+        "Is there a return policy?" to "Yes, you can cancel your booking up to 24 hours before the pickup time for a full refund. Cancellations made less than 24 hours before will incur a 30% fee.",
+        "Can I save my favorite item for later?" to "Yes, you can add cars to your favorites by clicking the heart icon. Access your saved cars anytime from the 'Favorites' tab.",
+        "Can I share the products with my friends" to "Yes, you can share car details with friends via the share button on the car details page, which allows sharing via messaging apps, email, or social media.",
+        "How do I contact customer Support?" to "You can contact our customer support team via phone at +213 657123478, email at support@zmauto.com, or through the 'Contact' section in the Help Center.",
+        "What payment methods are accepted?" to "We accept credit/debit cards, PayPal, and cash payments at the time of pickup. All online payments are secured with industry-standard encryption.",
+        "How to add review?" to "After completing your rental, you'll receive a notification to review your experience. You can also add reviews by visiting the car details page and clicking 'Add Review'."
+    )
 
     Column(
         modifier = Modifier
@@ -209,7 +224,7 @@ fun FAQItem(question: String) {
         if (expanded) {
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Answer placeholder text for: $question",
+                text = answers[question] ?: "No answer available",
                 fontFamily = poppins,
                 fontSize = 14.sp,
                 color = Color.Gray
@@ -239,6 +254,29 @@ fun ContactList() {
 @Composable
 fun ContactItem(contact: ContactOption) {
     var expanded by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    
+    // Map contact options to their details
+    val contactDetails = mapOf(
+        "Customer Service" to "Call us at: +213 657123478",
+        "WhatsApp" to "Message us on: +213 657123478",
+        "Website" to "Visit our website: ZMauto.com",
+        "Facebook" to "Follow us: ZM Auto Official",
+        "Twitter" to "Follow us: @ZMAutoOfficial",
+        "Instagram" to "Follow us: @zmauto_official"
+    )
+    
+    // Handle website click
+    val handleWebsiteClick = {
+        if (contact.name == "Website") {
+            try {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://zmauto.com"))
+                context.startActivity(intent)
+            } catch (e: Exception) {
+                Toast.makeText(context, "Could not open website", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -272,12 +310,24 @@ fun ContactItem(contact: ContactOption) {
         }
         if (expanded) {
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Details for ${contact.name}",
-                fontFamily = poppins,
-                fontSize = 14.sp,
-                color = Color.Gray
-            )
+            
+            // If it's the website option, make it clickable
+            if (contact.name == "Website") {
+                Text(
+                    text = contactDetails[contact.name] ?: "No details available",
+                    fontFamily = poppins,
+                    fontSize = 14.sp,
+                    color = Color(0xFF149459),
+                    modifier = Modifier.clickable(onClick = handleWebsiteClick)
+                )
+            } else {
+                Text(
+                    text = contactDetails[contact.name] ?: "No details available",
+                    fontFamily = poppins,
+                    fontSize = 14.sp,
+                    color = Color.Gray
+                )
+            }
         }
     }
 }

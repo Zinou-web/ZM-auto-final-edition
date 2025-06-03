@@ -35,6 +35,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,11 +52,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
 import com.example.myapplication.R
 import com.example.myapplication.ui.theme.SecondaryGreen
 import com.example.myapplication.ui.theme.BackgroundGray
 import com.example.myapplication.ui.theme.MyApplicationTheme
 import com.example.myapplication.ui.theme.poppins
+import com.example.myapplication.data.model.Car
+import com.example.myapplication.ui.screens.home.FavoriteViewModel
+import com.example.myapplication.ui.screens.home.FavoriteUiState
+import androidx.compose.runtime.collectAsState
 
 data class Car(
     val name: String,
@@ -84,11 +91,21 @@ fun FavoriteScreen(
     onHomeClick: () -> Unit = {},
     onBookingsClick: () -> Unit = {},
     onProfileClick: () -> Unit = {},
-    onCarClick: (String) -> Unit = {}
+    onCarClick: (String) -> Unit = {},
+    favoriteViewModel: FavoriteViewModel = hiltViewModel()
 ) {
     val selectedFilter = remember { mutableStateOf("All") }
     val isSearchActive = remember { mutableStateOf(false) }
     val searchQuery = remember { mutableStateOf("") }
+    
+    // Get favorite cars from ViewModel
+    val uiState by favoriteViewModel.uiState.collectAsState()
+    val favoriteCars by favoriteViewModel.favoriteCars.collectAsState()
+    
+    // Load favorite cars when the screen is first displayed
+    LaunchedEffect(Unit) {
+        favoriteViewModel.loadFavoriteCars()
+    }
 
     Scaffold(
         containerColor = BackgroundGray,
@@ -282,20 +299,154 @@ fun FavoriteScreen(
             )
         }
     ) { paddingValues ->
-        Box(
+        LazyColumn(
             modifier = Modifier
+                .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = 16.dp),
+            contentPadding = PaddingValues(vertical = 16.dp)
         ) {
-            LazyColumn(
-                contentPadding = PaddingValues(bottom = 80.dp, top = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                items(carList) { car ->
-                    CarCard(
-                        car = car,
-                        onClick = { onCarClick(car.name) }
-                    )
+            // Show appropriate content based on UI state
+            when (uiState) {
+                is FavoriteUiState.Loading -> {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            androidx.compose.material3.CircularProgressIndicator(
+                                color = SecondaryGreen
+                            )
+                        }
+                    }
+                }
+                is FavoriteUiState.Success -> {
+                    // Filter cars based on selected filter and search query
+                    val filteredCars = if (searchQuery.value.isNotEmpty()) {
+                        favoriteCars.filter { car ->
+                            "${car.brand} ${car.model}".contains(searchQuery.value, ignoreCase = true)
+                        }
+                    } else if (selectedFilter.value != "All") {
+                        favoriteCars.filter { car ->
+                            car.type == selectedFilter.value
+                        }
+                    } else {
+                        favoriteCars
+                    }
+                    
+                    if (filteredCars.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(200.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = if (searchQuery.value.isNotEmpty()) 
+                                        "No cars matching '${searchQuery.value}'" 
+                                    else if (selectedFilter.value != "All") 
+                                        "No ${selectedFilter.value} cars in favorites"
+                                    else 
+                                        "No favorite cars yet",
+                                    fontSize = 16.sp,
+                                    fontFamily = poppins,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color.Gray,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    } else {
+                        items(
+                            items = filteredCars,
+                            key = { car: com.example.myapplication.data.model.Car -> car.id }
+                        ) { car: com.example.myapplication.data.model.Car ->
+                            CarCard(
+                                car = car,
+                                onClick = { onCarClick(car.id.toString()) }
+                            )
+                        }
+                    }
+                }
+                is FavoriteUiState.Error -> {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = (uiState as FavoriteUiState.Error).message,
+                                    fontSize = 16.sp,
+                                    fontFamily = poppins,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color.Red,
+                                    textAlign = TextAlign.Center
+                                )
+                                
+                                Spacer(modifier = Modifier.height(16.dp))
+                                
+                                androidx.compose.material3.Button(
+                                    onClick = { favoriteViewModel.loadFavoriteCars() },
+                                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                        containerColor = SecondaryGreen
+                                    )
+                                ) {
+                                    Text("Retry")
+                                }
+                            }
+                        }
+                    }
+                }
+                is FavoriteUiState.Empty -> {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(400.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.heart),
+                                    contentDescription = "No favorites",
+                                    tint = Color.Gray,
+                                    modifier = Modifier.size(64.dp)
+                                )
+                                
+                                Spacer(modifier = Modifier.height(16.dp))
+                                
+                                Text(
+                                    text = "No favorite cars yet",
+                                    fontSize = 18.sp,
+                                    fontFamily = poppins,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color.Black,
+                                    textAlign = TextAlign.Center
+                                )
+                                
+                                Spacer(modifier = Modifier.height(8.dp))
+                                
+                                Text(
+                                    text = "Your favorite cars will appear here",
+                                    fontSize = 16.sp,
+                                    fontFamily = poppins,
+                                    fontWeight = FontWeight.Normal,
+                                    color = Color.Gray,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -402,7 +553,7 @@ fun FavoriteBottomNavItem(
 
 @Composable
 fun CarCard(
-    car: Car,
+    car: com.example.myapplication.data.model.Car,
     onClick: () -> Unit = {}
 ) {
     // State to track if this car is favorited - always true since this is the favorites screen
@@ -418,7 +569,7 @@ fun CarCard(
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(5.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
             elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
         ) {
             Column(
@@ -437,10 +588,12 @@ fun CarCard(
                     Box(
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        Image(
-                            painter = painterResource(id = car.imageRes),
-                            contentDescription = car.name,
-                            contentScale = ContentScale.FillBounds,
+                        AsyncImage(
+                            model = car.picture,
+                            contentDescription = "${car.brand} ${car.model}",
+                            contentScale = ContentScale.FillWidth,
+                            placeholder = painterResource(id = R.drawable.car_placeholder),
+                            error = painterResource(id = R.drawable.car_placeholder),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .fillMaxHeight()
@@ -448,7 +601,7 @@ fun CarCard(
 
                         // Rating Badge
                         Box(
-                    modifier = Modifier
+                            modifier = Modifier
                                 .padding(start = 8.dp, top = 8.dp)
                                 .align(Alignment.TopStart)
                         ) {
@@ -460,23 +613,23 @@ fun CarCard(
                                 Row(
                                     modifier = Modifier.padding(horizontal = 3.dp, vertical = 0.dp),
                                     verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
+                                ) {
+                                    Icon(
                                         painter = painterResource(id = R.drawable.green_star),
-                        contentDescription = "Rating",
-                        tint = SecondaryGreen,
-                        modifier = Modifier.size(16.dp)
-                    )
+                                        contentDescription = "Rating",
+                                        tint = SecondaryGreen,
+                                        modifier = Modifier.size(16.dp)
+                                    )
 
-                    Spacer(modifier = Modifier.width(4.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
 
-                    Text(
+                                    Text(
                                         text = car.rating.toString(),
                                         fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black
-                    )
-                }
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.Black
+                                    )
+                                }
                             }
                         }
 
@@ -490,11 +643,11 @@ fun CarCard(
                                 .background(Color.White)
                                 .clickable { isFavorite = !isFavorite }
                         ) {
-                Icon(
+                            Icon(
                                 painter = painterResource(id = R.drawable.heart),
                                 contentDescription = "Remove from favorites",
                                 tint = if (isFavorite) Color(0xFFFF4444) else Color.Gray,
-                    modifier = Modifier
+                                modifier = Modifier
                                     .size(18.dp)
                                     .align(Alignment.Center)
                             )
@@ -512,7 +665,7 @@ fun CarCard(
                 ) {
                     // Car Name
                     Text(
-                        text = car.name,
+                        text = "${car.brand} ${car.model}",
                         fontSize = 18.sp,
                         fontFamily = poppins,
                         fontWeight = FontWeight.SemiBold,
@@ -521,7 +674,7 @@ fun CarCard(
 
                     // Price
                     Text(
-                        text = car.price,
+                        text = "${car.rentalPricePerDay}DA/day",
                         fontSize = 15.sp,
                         fontFamily = poppins,
                         fontWeight = FontWeight.Normal,
@@ -549,21 +702,21 @@ fun CarCard(
                     // Transmission
                     FeatureItem(
                         iconRes = R.drawable.manual,
-                        text = car.transmission
+                        text = car.transmission ?: "Manual"
                     )
                     Spacer(modifier = Modifier.width(37.dp))
                     
                     // Fuel
                     FeatureItem(
                         iconRes = R.drawable.petrol,
-                        text = car.fuel
+                        text = car.fuel ?: "Petrol"
                     )
                     Spacer(modifier = Modifier.width(37.dp))
                     
                     // Seats
                     FeatureItem(
                         iconRes = R.drawable.seat,
-                        text = "${car.seats} Seats"
+                        text = "${car.seatingCapacity ?: 5} Seats"
                     )
                 }
             }

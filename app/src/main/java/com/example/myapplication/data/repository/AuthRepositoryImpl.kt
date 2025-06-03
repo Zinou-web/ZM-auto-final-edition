@@ -210,10 +210,17 @@ class AuthRepositoryImpl @Inject constructor(
                 emit(ApiResource(status = ApiStatus.SUCCESS, data = success))
             } else {
                 val wrapper: NetworkResponse<PasswordResetResponse> = apiService.verifyPasswordReset(email, code, newPassword)
+                // Verify backend wrapper and data
                 if (!wrapper.success || wrapper.data == null) {
                     throw Exception(wrapper.message ?: "Password reset verification failed")
                 }
-                emit(ApiResource(status = ApiStatus.SUCCESS, data = wrapper.data.success))
+                // Check if reset was successful
+                if (!wrapper.data.success) {
+                    // Backend returned success=false, use its message
+                    throw Exception(wrapper.data.message ?: "Invalid reset code")
+                }
+                // Emit success when reset code is valid
+                emit(ApiResource(status = ApiStatus.SUCCESS, data = true))
             }
         } catch (e: Exception) {
             emit(ApiResource(status = ApiStatus.ERROR, message = e.message ?: "Failed to verify password reset"))

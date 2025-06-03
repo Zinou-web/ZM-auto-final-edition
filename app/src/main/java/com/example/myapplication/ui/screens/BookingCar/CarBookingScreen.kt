@@ -21,6 +21,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.myapplication.R
 import com.example.myapplication.ui.screens.home.BookingViewModel
 import com.example.myapplication.ui.theme.poppins
@@ -38,9 +39,9 @@ fun CarBookingScreen(
     carId: String? = null,
     onBackPressed: () -> Unit = {},
     onContinue: () -> Unit = {},
-    viewModel: CarBookingViewModel = viewModel(),
-    bookingViewModel: BookingViewModel = viewModel(),
-    reservationViewModel: ReservationViewModel = viewModel()
+    viewModel: CarBookingViewModel = hiltViewModel(),
+    bookingViewModel: BookingViewModel = hiltViewModel(),
+    reservationViewModel: ReservationViewModel = hiltViewModel()
 ) {
     // Context for date and time pickers
     val context = LocalContext.current
@@ -187,11 +188,11 @@ fun CarBookingScreen(
                 }
                 
             TopImageSection(
-                imageUrl = null, // Placeholder - Car object not available
+                imageUrl = uiState.carPicture,
                 isFavorite = false,
                 onFavoriteClick = {},
                 onBackPressed = onBackPressed,
-                    title = screenTitle,
+                title = screenTitle,
                 showFavorite = false
             )
             Spacer(modifier = Modifier.height(10.dp))
@@ -630,9 +631,12 @@ private fun dateToLocalDate(date: Date): java.time.LocalDate {
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun CarBookingScreenWithVMPreview() {
-    CarBookingScreen(
-        carId = "1",
-        onBackPressed = {},
-        onContinue = {}
-    )
+    // Note: Preview will not work properly with hiltViewModel() as it needs a HiltViewModelFactory
+    // In a real app, you'd use a PreviewParameterProvider, but we'll leave this simple for now
+    androidx.compose.material3.Surface {
+        Text(
+            "Preview not available - CarBookingScreen requires Hilt injection",
+            modifier = Modifier.padding(16.dp)
+        )
+    }
 } 

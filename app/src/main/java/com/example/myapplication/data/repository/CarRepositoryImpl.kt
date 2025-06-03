@@ -26,139 +26,47 @@ class CarRepositoryImpl @Inject constructor(
     // Toggle mock data based on build config: debug builds use mock, release uses real backend
     private val useMockData = BuildConfig.DEBUG
 
-    // Mock car data
+    // Mock car data: only three cars as per design
     private val mockCars = listOf(
         Car(
             id = 1,
-            brand = "Toyota",
-            model = "Corolla",
-            year = 2022,
-            rentalPricePerDay = java.math.BigDecimal(55.0),
-            transmission = "Automatic",
-            rating = 4,
-            colour = "White",
-            fuel = "Petrol",
-            type = "Sedan" // Exact match for filter type
-        ),
-        Car(
-            id = 2,
-            brand = "BMW",
-            model = "X5",
-            year = 2023,
-            rentalPricePerDay = java.math.BigDecimal(120.0),
-            transmission = "Automatic",
-            rating = 5,
-            colour = "Black",
-            fuel = "Diesel",
-            type = "SUV" // Exact match for filter type
-        ),
-        Car(
-            id = 3,
-            brand = "Mercedes",
-            model = "S-Class",
-            year = 2023,
-            rentalPricePerDay = java.math.BigDecimal(150.0),
-            transmission = "Automatic",
-            rating = 5,
-            colour = "Silver",
-            fuel = "Petrol",
-            type = "Luxury" // Exact match for filter type
-        ),
-        Car(
-            id = 4,
-            brand = "Toyota",
-            model = "Yaris",
-            year = 2021,
-            rentalPricePerDay = java.math.BigDecimal(45.0),
-            transmission = "Manual",
-            rating = 3,
-            colour = "Red",
-            fuel = "Petrol",
-            type = "Compact" // Exact match for filter type
-        ),
-        Car(
-            id = 5,
-            brand = "Tesla",
-            model = "Model 3",
-            year = 2023,
-            rentalPricePerDay = java.math.BigDecimal(130.0),
-            transmission = "Automatic",
-            rating = 5,
-            colour = "White",
-            fuel = "Electric",
-            type = "Electric" // Exact match for filter type
-        ),
-        Car(
-            id = 6,
-            brand = "Audi",
-            model = "A4",
-            year = 2022,
-            rentalPricePerDay = java.math.BigDecimal(95.0),
-            transmission = "Automatic",
-            rating = 4,
-            colour = "Blue",
-            fuel = "Petrol",
-            type = "Sedan"
-        ),
-        Car(
-            id = 7,
-            brand = "BMW",
-            model = "3 Series",
-            year = 2021,
-            rentalPricePerDay = java.math.BigDecimal(90.0),
-            transmission = "Automatic",
-            rating = 4,
-            colour = "Black",
-            fuel = "Diesel",
-            type = "Luxury"
-        ),
-        Car(
-            id = 8,
-            brand = "Volkswagen",
-            model = "Golf",
-            year = 2020,
-            rentalPricePerDay = java.math.BigDecimal(50.0),
-            transmission = "Manual",
-            rating = 3,
-            colour = "Grey",
-            fuel = "Petrol",
-            type = "Compact"
-        ),
-        Car(
-            id = 9,
-            brand = "Nissan",
-            model = "Qashqai",
-            year = 2022,
-            rentalPricePerDay = java.math.BigDecimal(70.0),
-            transmission = "Automatic",
-            rating = 4,
-            colour = "Orange",
-            fuel = "Petrol",
-            type = "SUV"
-        ),
-        Car(
-            id = 10,
-            brand = "Tesla",
-            model = "Model Y",
-            year = 2023,
-            rentalPricePerDay = java.math.BigDecimal(140.0),
-            transmission = "Automatic",
-            rating = 5,
-            colour = "Black",
-            fuel = "Electric",
-            type = "Electric"
-        ),
-        // New mock entry for Hyundai i10 with red color and local drawable resource
-        Car(
-            id = 11,
             picture = "android.resource://com.example.myapplication/drawable/car_details_i10",
+            description = "Hyundai i10 - Compact city car",
             brand = "Hyundai",
             model = "i10",
             year = 2022,
-            rentalPricePerDay = java.math.BigDecimal(50.0),
+            rentalPricePerDay = java.math.BigDecimal(3500.0),
             transmission = "Manual",
             rating = 4,
+            colour = "Blue",
+            fuel = "Petrol",
+            type = "Hatchback"
+        ),
+        Car(
+            id = 2,
+            picture = "android.resource://com.example.myapplication/drawable/yaristoprated",
+            description = "Toyota Yaris - Reliable hatchback",
+            brand = "Toyota",
+            model = "Yaris",
+            year = 2021,
+            rentalPricePerDay = java.math.BigDecimal(3500.0),
+            transmission = "Manual",
+            rating = 3,
             colour = "Red",
+            fuel = "Petrol",
+            type = "Hatchback"
+        ),
+        Car(
+            id = 3,
+            picture = "android.resource://com.example.myapplication/drawable/audia3topratedcars",
+            description = "Audi A3 - Premium compact car",
+            brand = "Audi",
+            model = "A3",
+            year = 2019,
+            rentalPricePerDay = java.math.BigDecimal(6200.0),
+            transmission = "Manual",
+            rating = 5,
+            colour = "Black",
             fuel = "Petrol",
             type = "Hatchback"
         )

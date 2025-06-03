@@ -23,43 +23,49 @@ class FavoriteRepositoryImpl @Inject constructor(
     // In-memory cache of favorite car IDs for the current session
     private val favoriteCars = mutableSetOf<Long>()
     
-    // Mock car data - in a real app, this would be fetched from the server or local database
+    // Mock car data for favorites: only the three cars in mock
     private val mockCarData = mapOf(
         1L to Car(
             id = 1,
-            brand = "Toyota",
-            model = "Corolla",
+            picture = "android.resource://com.example.myapplication/drawable/car_details_i10",
+            description = "Hyundai i10 - Compact city car",
+            brand = "Hyundai",
+            model = "i10",
             year = 2022,
-            rentalPricePerDay = java.math.BigDecimal(55.0),
-            transmission = "Automatic",
+            rentalPricePerDay = java.math.BigDecimal(50.0),
+            transmission = "Manual",
             rating = 4,
-            colour = "White",
+            colour = "Blue",
             fuel = "Petrol",
-            type = "Sedan"
+            type = "Hatchback"
         ),
         2L to Car(
             id = 2,
-            brand = "BMW",
-            model = "X5",
-            year = 2023,
-            rentalPricePerDay = java.math.BigDecimal(120.0),
-            transmission = "Automatic",
-            rating = 5,
-            colour = "Black",
-            fuel = "Diesel",
-            type = "SUV"
+            picture = "android.resource://com.example.myapplication/drawable/yaristoprated",
+            description = "Toyota Yaris - Economic and reliable",
+            brand = "Toyota",
+            model = "Yaris",
+            year = 2021,
+            rentalPricePerDay = java.math.BigDecimal(35.0),
+            transmission = "Manual",
+            rating = 3,
+            colour = "Red",
+            fuel = "Petrol",
+            type = "Hatchback"
         ),
         3L to Car(
             id = 3,
-            brand = "Mercedes",
-            model = "S-Class",
-            year = 2023,
-            rentalPricePerDay = java.math.BigDecimal(150.0),
-            transmission = "Automatic",
+            picture = "android.resource://com.example.myapplication/drawable/audia3topratedcars",
+            description = "Audi A3 - Premium compact sedan",
+            brand = "Audi",
+            model = "A3",
+            year = 2019,
+            rentalPricePerDay = java.math.BigDecimal(80.0),
+            transmission = "Manual",
             rating = 5,
-            colour = "Silver",
+            colour = "Black",
             fuel = "Petrol",
-            type = "Luxury"
+            type = "Hatchback"
         )
     )
     

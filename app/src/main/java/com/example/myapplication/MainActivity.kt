@@ -50,7 +50,53 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-    
+
+
+//zzm.autocarrental@gmail.com     Fesdis-Batna
+//kwntrqm226@gmail.com
+//zin.deghnouche@etu.univ-batna2.dz
+//testszmauto@gmail.com
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     private fun forceInitializeGoogleSignIn() {
         try {
             // Get the web client ID directly from resource identifier

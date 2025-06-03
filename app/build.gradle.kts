@@ -16,7 +16,7 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "API_BASE_URL", "\"https://c3ab-41-200-177-222.ngrok-free.app/\"")
+        buildConfigField("String", "API_BASE_URL", "\"https://1147-105-105-104-131.ngrok-free.app/\"")
     }
 
     lint {

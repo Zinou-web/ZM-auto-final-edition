@@ -52,7 +52,7 @@ class ProfileViewModel @Inject constructor(
     var name = mutableStateOf("")
     var email = mutableStateOf("")
     var phone = mutableStateOf("")
-    var currentProfileImageUrl = mutableStateOf<String?>(null)
+    var currentProfileImageUrl = mutableStateOf<String?>("")
     // State variables for additional profile details
     var birthday = mutableStateOf("")
     var location = mutableStateOf("")
@@ -93,9 +93,11 @@ class ProfileViewModel @Inject constructor(
                                 email.value = loadedUser.email
                                 phone.value = loadedUser.phone.orEmpty()
                                 // Use server picture or fallback to saved preference
-                                currentProfileImageUrl.value = loadedUser.profileImage ?: authPreferenceManager.getUserProfileImage().orEmpty()
+                                // Make sure we have a valid image URL, otherwise set to empty to trigger default image display
+                                val imageUrl = loadedUser.profileImage ?: authPreferenceManager.getUserProfileImage()
+                                currentProfileImageUrl.value = if (!imageUrl.isNullOrBlank()) imageUrl else ""
                                 _uiState.value = ProfileUiState.Success()
-                                Log.d("ProfileViewModel", "Profile loaded successfully: $fullName")
+                                Log.d("ProfileViewModel", "Profile loaded successfully: $fullName, Image: ${currentProfileImageUrl.value}")
                             } ?: run {
                                 _uiState.value = ProfileUiState.Error("User profile data is null")
                             }
@@ -196,7 +198,7 @@ class ProfileViewModel @Inject constructor(
                                     // This assumes profile image URL from upload should be immediately persisted
                                     // Or, rely on next full profile load/update to get it from backend via User object
                                     authPreferenceManager.saveUserProfileImage(imageUrl)
-                                    newProfileImageUri = null // Clear selection
+                                    // newProfileImageUri = null // Temporarily commented out to fix disappearing image issue
                                     _uiState.value = ProfileUiState.Success("Profile image updated")
                                     Log.d("ProfileViewModel", "Profile image uploaded successfully: $imageUrl")
                                 } ?: run {

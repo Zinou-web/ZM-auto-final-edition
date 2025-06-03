@@ -167,7 +167,7 @@ fun ProfileScreen(
                 val painter = when {
                     viewModel.newProfileImageUri != null -> rememberAsyncImagePainter(model = viewModel.newProfileImageUri)
                     !viewModel.currentProfileImageUrl.value.isNullOrEmpty() -> rememberAsyncImagePainter(model = viewModel.currentProfileImageUrl.value)
-                    else -> painterResource(id = R.drawable.account)
+                    else -> painterResource(id = R.drawable.accountusethis)
                 }
                 // Flag to know if we have a user image
                 val hasImage = viewModel.newProfileImageUri != null || !viewModel.currentProfileImageUrl.value.isNullOrEmpty()

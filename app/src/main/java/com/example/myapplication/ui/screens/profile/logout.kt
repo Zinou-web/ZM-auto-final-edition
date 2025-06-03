@@ -114,7 +114,7 @@ fun logoutScreen(
                 contentAlignment = Alignment.BottomEnd,
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             ) {
-                if (user?.profileImage != null && user!!.profileImage.isNotEmpty()) {
+                if (user?.profileImage != null && user?.profileImage?.isNotEmpty() == true) {
                     AsyncImage(
                         model = user!!.profileImage,
                         contentDescription = "Profile Image",

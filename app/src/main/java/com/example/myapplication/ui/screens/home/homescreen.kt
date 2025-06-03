@@ -200,7 +200,7 @@ fun HomeScreen(
                     },
                     modifier = Modifier
                         .weight(1f)
-                        .height(45.dp),
+                        .height(50.dp),
                     shape = RoundedCornerShape(20.dp),
                     colors = TextFieldDefaults.textFieldColors(
                         containerColor = Color.White,
@@ -216,7 +216,7 @@ fun HomeScreen(
                 // Filter Button
                 Box(
                     modifier = Modifier
-                        .size(45.dp)
+                        .size(50.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .background(Color.White)
                         .padding(10.dp)
@@ -235,7 +235,7 @@ fun HomeScreen(
                 // Notification icon
                 Box(
                     modifier = Modifier
-                        .size(45.dp)
+                        .size(50.dp)
                         .clip(CircleShape)
                         .background(Color(0xFFFFFFFF))
                         .clickable(onClick = onNotificationClick)
@@ -1144,16 +1144,20 @@ fun CarItem(
                     Box(
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        // Car Image: use a custom popular image for i10 (ID 11), otherwise load car.picture
-                        val popularImage = if (car.id == 11L) {
-                            "android.resource://com.example.myapplication/drawable/mostpopularcars_i10"
-                        } else null
+                        // Car Image: use specific images for each car ID
+                        val imageResource = when(car.id) {
+                            1L -> "android.resource://com.example.myapplication/drawable/car_details_i10"
+                            2L -> "android.resource://com.example.myapplication/drawable/yaristoprated" 
+                            3L -> "android.resource://com.example.myapplication/drawable/audia3topratedcars"
+                            else -> car.picture
+                        }
+                        
                         AsyncImage(
-                            model = popularImage ?: car.picture,
+                            model = imageResource,
                             placeholder = painterResource(id = R.drawable.car_placeholder),
                             error = painterResource(id = R.drawable.car_placeholder),
                             contentDescription = "${car.brand} ${car.model}",
-                            contentScale = ContentScale.Fit,
+                            contentScale = ContentScale.FillWidth,
                             modifier = Modifier.fillMaxSize()
                         )
 
@@ -1230,7 +1234,7 @@ fun CarItem(
 
                     // Price
                     Text(
-                        text = "${car.rentalPricePerDay}DA / day",
+                        text = "${car.rentalPricePerDay}.0 DA / day",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Color(0xFF149459)
@@ -1515,44 +1519,43 @@ fun PopularCarItem(
             .height(160.dp)
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Box(
             modifier = Modifier.fillMaxSize()
         ) {
-            // Gradient Background
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(
-                        brush = Brush.linearGradient(
-                            colors = listOf(
-                                Color(0xFF149459), // Green primary color
-                                Color(0xFF0D6E41)  // Darker shade
-                            ),
-                            start = Offset(0f, 0f),
-                            end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
-                        )
-                    )
-            )
+            // Car Image: use new full-card images
+            val popularImage = when(car.id) {
+                1L -> "android.resource://com.example.myapplication/drawable/i10mostpopfinal"
+                2L -> "android.resource://com.example.myapplication/drawable/yarismostpopfinal"
+                3L -> "android.resource://com.example.myapplication/drawable/a3mostpopfinal"
+                else -> car.picture
+            }
             
-            // Car Image: use a custom popular image for i10 (ID 11), otherwise load car.picture
-            val popularImage = if (car.id == 11L) {
-                "android.resource://com.example.myapplication/drawable/mostpopularcars_i10"
-            } else null
             AsyncImage(
-                model = popularImage ?: car.picture,
+                model = popularImage,
                 placeholder = painterResource(id = R.drawable.car_placeholder),
                 error = painterResource(id = R.drawable.car_placeholder),
                 contentDescription = "${car.brand} ${car.model}",
-                contentScale = ContentScale.Fit,
+                contentScale = ContentScale.FillBounds,
+                modifier = Modifier.fillMaxSize()
+            )
+            
+            // Semi-transparent overlay at the bottom for text readability
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth(0.9f)
-                    .height(90.dp)
-                    .align(Alignment.Center)
-                    .offset(y = (-8).dp)
+                    .fillMaxWidth()
+                    .height(60.dp)
+                    .align(Alignment.BottomCenter)
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                Color.Black.copy(alpha = 0.5f)
+                            )
+                        )
+                    )
             )
             
             // Car Info Box
@@ -1580,7 +1583,7 @@ fun PopularCarItem(
                 ) {
                     // Price
                     Text(
-                        text = "${car.rentalPricePerDay}DA / day",
+                        text = "${car.rentalPricePerDay}.0 DA / day",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
                         color = Color.White.copy(alpha = 0.9f)
@@ -1615,7 +1618,7 @@ fun PopularCarItem(
                     .padding(12.dp)
                     .align(Alignment.TopStart)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(Color.White.copy(alpha = 0.2f))
+                    .background(Color.Black.copy(alpha = 0.5f))
                     .padding(horizontal = 8.dp, vertical = 4.dp)
             ) {
                 Text(
@@ -1633,7 +1636,7 @@ fun PopularCarItem(
                     .align(Alignment.TopEnd)
                     .size(32.dp)
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.2f))
+                    .background(Color.Black.copy(alpha = 0.5f))
                     .clickable { favoriteViewModel.toggleFavorite(car.id) }
                     .padding(6.dp)
             ) {

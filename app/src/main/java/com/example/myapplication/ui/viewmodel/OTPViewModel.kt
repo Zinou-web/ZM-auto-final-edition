@@ -110,4 +110,25 @@ class OTPViewModel @Inject constructor(
      * Get current user's email from preferences
      */
     fun getUserEmail(): String? = authPreferenceManager.getUserEmail()
+
+    /**
+     * Resend password reset code to the user's email
+     */
+    fun resendPasswordReset() {
+        val email = authPreferenceManager.getUserEmail()
+        if (email.isNullOrEmpty()) {
+            _state.value = OTPUiState.Error("User email not found")
+            return
+        }
+        viewModelScope.launch {
+            _state.value = OTPUiState.Loading
+            authRepository.requestPasswordReset(email).collectLatest { result ->
+                _state.value = when (result.status) {
+                    ApiStatus.SUCCESS -> OTPUiState.ResendSuccess
+                    ApiStatus.ERROR -> OTPUiState.Error(result.message ?: "Resend OTP failed")
+                    ApiStatus.LOADING -> OTPUiState.Loading
+                }
+            }
+        }
+    }
 } 

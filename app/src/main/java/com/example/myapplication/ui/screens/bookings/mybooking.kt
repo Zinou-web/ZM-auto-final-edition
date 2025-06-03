@@ -47,6 +47,9 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.layout.ContentScale
 import com.example.myapplication.ui.screens.home.FavoriteViewModel
 import android.util.Log
+import coil.compose.rememberAsyncImagePainter
+import android.content.Intent
+import android.net.Uri
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -478,10 +481,16 @@ fun UpcomingBookingItem(
                     ) {
                         // Car Image
                         Image(
-                            painter = painterResource(id = R.drawable.car_placeholder),
+                            painter = when {
+                                reservation.car?.picture?.isNotEmpty() == true -> rememberAsyncImagePainter(reservation.car.picture)
+                                reservation.car?.model?.contains("i10", ignoreCase = true) == true -> painterResource(id = R.drawable.car_details_i10)
+                                reservation.car?.model?.contains("Yaris", ignoreCase = true) == true -> painterResource(id = R.drawable.yaristoprated)
+                                reservation.car?.model?.contains("A3", ignoreCase = true) == true -> painterResource(id = R.drawable.a3mostpopfinal)
+                                else -> painterResource(id = R.drawable.car_placeholder)
+                            },
                             contentDescription = 
                                 reservation.car?.let { "${it.brand} ${it.model}" } ?: "Car Image",
-                            contentScale = ContentScale.Fit,
+                            contentScale = ContentScale.FillBounds,
                             modifier = Modifier.fillMaxSize()
                         )
 
@@ -666,7 +675,7 @@ fun UpcomingBookingItem(
                     }
                 }
 
-                // Booking specific parts below
+                // Add car location section with navigation button
                 Spacer(modifier = Modifier.height(24.dp))
                 
                 // Car Location section
@@ -683,29 +692,49 @@ fun UpcomingBookingItem(
                         color = Color.Gray
                     )
                     
+                    // Get context for intent actions
+                    val context = LocalContext.current
+                    
                     Text(
                         text = "Navigate",
                         fontSize = 14.sp,
                         fontFamily = poppins,
                         fontWeight = FontWeight.Normal,
-                        color = Color.Gray,
-                        modifier = Modifier.clickable { /* Navigate action */ }
+                        color = Color(0xFF149459),
+                        modifier = Modifier.clickable {
+                            // Open Google Maps to Batna location
+                            val gmmIntentUri = Uri.parse("geo:35.5607,6.1734?q=Batna,Algeria")
+                            val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
+                            mapIntent.setPackage("com.google.android.apps.maps")
+                            
+                            // Try to start Google Maps, fallback to browser if not installed
+                            try {
+                                context.startActivity(mapIntent)
+                            } catch (e: Exception) {
+                                // If Google Maps is not installed, open in browser
+                                val browserIntent = Intent(Intent.ACTION_VIEW, 
+                                    Uri.parse("https://www.google.com/maps/search/?api=1&query=Batna,Algeria"))
+                                context.startActivity(browserIntent)
+                            }
+                        }
                     )
                 }
                 
                 Spacer(modifier = Modifier.height(12.dp))
                 
                 // Map placeholder
-                Box(
+                Image(
+                    painter = painterResource(id = R.drawable.batna),
+                    contentDescription = "Map of Batna",
+                    contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(160.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color.LightGray)
                 )
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 // Cancel and Bill buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),

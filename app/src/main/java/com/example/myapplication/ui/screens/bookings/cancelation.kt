@@ -363,10 +363,4 @@ fun CancelationScreen(
 
 
 
-@Preview(showBackground = true)
-@Composable
-fun CancelationScreenPreview() {
-    MyApplicationTheme {
-        CancelationScreen()
-    }
-}
+

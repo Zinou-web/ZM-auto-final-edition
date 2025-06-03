@@ -75,9 +75,6 @@ fun OTPVerificationScreen(
     
     // Automatically request OTP when entering the screen (for registration flow)
     LaunchedEffect(Unit) {
-        if (fromForgotPassword) {
-            viewModel.resendOtp()
-        }
         // Pre-focus the first OTP digit field to open keyboard
         focusRequester1.requestFocus()
     }
@@ -345,7 +342,13 @@ fun OTPVerificationScreen(
                 textAlign = TextAlign.Center,
                 textDecoration = TextDecoration.Underline,
                 modifier = Modifier
-                    .clickable(enabled = state !is OTPUiState.Loading) { viewModel.resendOtp() }
+                    .clickable(enabled = state !is OTPUiState.Loading) {
+                        if (fromForgotPassword) {
+                            viewModel.resendPasswordReset()
+                        } else {
+                            viewModel.resendOtp()
+                        }
+                    }
                     .alpha(if (state is OTPUiState.Loading) 0.5f else 1f)
                     .align(Alignment.CenterHorizontally)
             )

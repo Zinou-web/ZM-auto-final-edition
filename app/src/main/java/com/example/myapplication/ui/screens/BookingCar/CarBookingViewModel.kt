@@ -5,20 +5,34 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.myapplication.data.api.ApiStatus
+import com.example.myapplication.data.model.Car
+import com.example.myapplication.data.repository.CarRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.util.*
+import javax.inject.Inject
 
 data class CarBookingUIState(
     val isLoading: Boolean = false,
+    val carId: Long = 0,
     val carName: String = "",
     val carPrice: Double = 0.0,
     val carYear: String = "",
     val carTransmission: String = "Automatic",
     val carRating: Float = 4.5f,
-    val error: String? = null
+    val carPicture: String? = null,
+    val carBrand: String = "",
+    val carModel: String = "",
+    val error: String? = null,
+    val car: Car? = null
 )
 
-class CarBookingViewModel : ViewModel() {
+@HiltViewModel
+class CarBookingViewModel @Inject constructor(
+    private val carRepository: CarRepository
+) : ViewModel() {
     
     var uiState by mutableStateOf(CarBookingUIState(isLoading = true))
         private set
@@ -50,15 +64,8 @@ class CarBookingViewModel : ViewModel() {
     // Load car details based on ID
     fun loadCarDetails(carId: String?) {
         if (carId.isNullOrEmpty()) {
-            // If no car ID is provided, use default values for testing
-            uiState = CarBookingUIState(
-                isLoading = false,
-                carName = "Toyota Corolla",
-                carPrice = 5000.0,
-                carYear = "2023",
-                carTransmission = "Automatic",
-                carRating = 4.5f
-            )
+            // If no car ID is provided, we should still mark as not loading
+            uiState = uiState.copy(isLoading = false)
             return
         }
         
@@ -66,39 +73,52 @@ class CarBookingViewModel : ViewModel() {
             uiState = uiState.copy(isLoading = true)
             
             try {
-                // In a real app, we would fetch car details from a repository
-                // For now, simulate fetching based on carId
-                val carDetails = fetchCarDetails(carId)
-                uiState = uiState.copy(
-                    isLoading = false,
-                    carName = carDetails.first,
-                    carPrice = carDetails.second,
-                    carYear = carDetails.third,
-                    carTransmission = carDetails.fourth,
-                    carRating = carDetails.fifth
-                )
+                // Get the car details from the repository
+                val id = carId.toLongOrNull() ?: 0
+                carRepository.getCarById(id).collectLatest { result ->
+                    when (result.status) {
+                        ApiStatus.SUCCESS -> {
+                            val car = result.data
+                            if (car != null) {
+                                uiState = uiState.copy(
+                                    isLoading = false,
+                                    carId = car.id,
+                                    carName = "${car.brand} ${car.model}",
+                                    carBrand = car.brand,
+                                    carModel = car.model,
+                                    carPrice = car.rentalPricePerDay.toDouble(),
+                                    carYear = car.year.toString(),
+                                    carTransmission = car.transmission ?: "Automatic",
+                                    carRating = car.rating.toFloat(),
+                                    carPicture = car.picture,
+                                    car = car
+                                )
+                                // Set the rent type based on car transmission
+                                updateRentType(if (car.transmission?.lowercase() == "automatic") "With Driver" else "Self-Driver")
+                            } else {
+                                uiState = uiState.copy(
+                                    isLoading = false,
+                                    error = "Car not found"
+                                )
+                            }
+                        }
+                        ApiStatus.ERROR -> {
+                            uiState = uiState.copy(
+                                isLoading = false,
+                                error = result.message ?: "Error loading car details"
+                            )
+                        }
+                        ApiStatus.LOADING -> {
+                            // Already set loading state
+                        }
+                    }
+                }
             } catch (e: Exception) {
                 uiState = uiState.copy(
                     isLoading = false,
                     error = "Failed to load car details: ${e.message}"
                 )
             }
-        }
-    }
-    
-    // Simulate fetching car details - in a real app, this would come from a repository
-    private fun fetchCarDetails(carId: String): CarDetails {
-        // Simulate network delay
-        Thread.sleep(500)
-        
-        // Return mock data based on carId
-        return when (carId) {
-            "1" -> CarDetails("Toyota Corolla", 55.0, "2022", "Automatic", 4.0f)
-            "2" -> CarDetails("BMW X5", 120.0, "2023", "Automatic", 5.0f)
-            "3" -> CarDetails("Mercedes S-Class", 150.0, "2023", "Automatic", 5.0f)
-            "4" -> CarDetails("Toyota Yaris", 45.0, "2021", "Manual", 3.0f)
-            "5" -> CarDetails("Tesla Model 3", 130.0, "2023", "Automatic", 5.0f)
-            else -> CarDetails("Car #$carId", 0.0, "", "", 0f)
         }
     }
     
